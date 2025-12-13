@@ -36,7 +36,7 @@ namespace renderer
             const glm::vec2 &uv_max);
 
         void draw_sheet_index(
-            const util::SpriteSheet &sheet,
+            const util::SpriteSheet *sheet,
             const glm::mat4 &mvp,
             int index);
 

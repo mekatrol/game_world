@@ -18,6 +18,7 @@ add_executable(game
     src/main.cpp
     util/texture.cpp
     renderer/sprite_renderer.cpp
+    renderer/sprite_surface.cpp
     renderer/shader.cpp
 )
 

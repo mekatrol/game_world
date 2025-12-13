@@ -166,9 +166,9 @@ namespace renderer
         glUseProgram(0);
     }
 
-    void SpriteRenderer::draw_sheet_index(const util::SpriteSheet &sheet, const glm::mat4 &mvp, int index)
+    void SpriteRenderer::draw_sheet_index(const util::SpriteSheet *sheet, const glm::mat4 &mvp, int index)
     {
-        const auto [uv0, uv1] = sheet.uv_rect(index);
-        draw(sheet.texture(), mvp, uv0, uv1);
+        const auto [uv0, uv1] = sheet->uv_rect(index);
+        draw(sheet->texture(), mvp, uv0, uv1);
     }
 }
