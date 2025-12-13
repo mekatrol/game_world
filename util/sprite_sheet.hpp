@@ -49,7 +49,7 @@ namespace util
         }
 
         // Returns UV rectangle: (uv_min, uv_max) in normalized 0..1
-        [[nodiscard]] std::pair<glm::vec2, glm::vec2> uv_rect(int index) const
+        [[nodiscard]] std::pair<glm::vec2, glm::vec2> uv_rect(int sprite_index) const
         {
             const int cols = columns();
             if (cols <= 0 || m_sprite_width <= 0 || m_sprite_height <= 0)
@@ -57,8 +57,8 @@ namespace util
                 return {glm::vec2(0.0f), glm::vec2(1.0f)};
             }
 
-            const int x = index % cols;
-            const int y = index / cols;
+            const int x = sprite_index % cols;
+            const int y = sprite_index / cols;
 
             const float tex_w = static_cast<float>(m_texture.width());
             const float tex_h = static_cast<float>(m_texture.height());

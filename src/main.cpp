@@ -56,14 +56,21 @@ int main()
         // Your file: 2048x2560 => 16 columns x 20 rows => 320 sprites total.
         util::SpriteSheet belt_sheet(
             "assets/entity/transport-belt/transport-belt.png",
-            128, // tile width (pixels)
-            128  // tile height (pixels)
+            128, // sprite width (pixels)
+            128  // sprite height (pixels)
         );
 
-        renderer::SpriteSurface sprite_surface_1(&belt_sheet, 0, 16);
-        renderer::SpriteSurface sprite_surface_2(&belt_sheet, 12, 16);
+        util::SpriteSheet explosion_sheet(
+            "assets/entity/explosion/explosion-1.png",
+            48, // sprite width (pixels)
+            48  // sprite height (pixels)
+        );
 
-        sprite_surface_2.set_position(100, 300);
+        renderer::SpriteSurface sprite_surface_1(&belt_sheet, 0, 16, 0.05);
+        renderer::SpriteSurface sprite_surface_2(&explosion_sheet, 0, 6, 0.1);
+
+        sprite_surface_1.set_position(100, 300);
+        sprite_surface_2.set_position(100, 700);
 
         float world_scale = 0.5f;
 

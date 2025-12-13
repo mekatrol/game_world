@@ -18,7 +18,7 @@ namespace renderer
     class SpriteSurface
     {
     public:
-        SpriteSurface(util::SpriteSheet *sheet, int offset, int count);
+        SpriteSurface(util::SpriteSheet *sheet, int offset, int count, double seconds_per_frame);
         ~SpriteSurface() {}
 
         void tick(double now, glm::mat4 &proj, renderer::SpriteRenderer *sprite_renderer, float scale);
@@ -39,5 +39,6 @@ namespace renderer
         int m_sprite_width = 0;
         int m_sprite_height = 0;
         int m_current_sprite_index = 0;
+        double m_seconds_per_frame = 0.05;
     };
 }

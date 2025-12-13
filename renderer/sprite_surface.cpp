@@ -7,28 +7,36 @@
 
 namespace renderer
 {
-    SpriteSurface::SpriteSurface(util::SpriteSheet *sheet, int offset, int count)
+    SpriteSurface::SpriteSurface(util::SpriteSheet *sheet, int offset, int count, double seconds_per_frame)
     {
         m_sheet = sheet;
         m_offset = offset;
         m_count = count;
         m_sprite_width = sheet->sprite_width();
         m_sprite_height = sheet->sprite_height();
+        m_seconds_per_frame = seconds_per_frame;
     }
 
     void SpriteSurface::tick(double now, glm::mat4 &proj, renderer::SpriteRenderer *sprite_renderer, float scale)
     {
-        // If your frame rate stutters, more than 1 second could pass
-        // between frames. This code "catches up" by advancing multiple
-        // steps so the animation stays time-correct.
+        // The time that a single frame lives for
         const double seconds_per_frame = 0.05;
+
+        // The amount of time that has apssed since last frame
         const double elapsed = now - m_last_advance_time;
 
-        if (elapsed >= seconds_per_frame)
+        // Are we ready for next frame?
+        if (elapsed >= m_seconds_per_frame)
         {
-            const int steps = static_cast<int>(elapsed / seconds_per_frame);
+            // If there has been a large delay (elapsed exceeds multiple frame times) then we may need
+            // to step multiple frames
+            const int steps = static_cast<int>(elapsed / m_seconds_per_frame);
+
+            // Index next sprite
             m_current_sprite_index = (m_current_sprite_index + steps) % m_count + (m_offset * m_count);
-            m_last_advance_time += static_cast<double>(steps) * seconds_per_frame;
+
+            // Keey track of 'now' in frame time
+            m_last_advance_time += static_cast<double>(steps) * m_seconds_per_frame;
         }
 
         // Model matrix: move to (x,y) then scale a unit quad up to (w,h).
@@ -36,9 +44,9 @@ namespace renderer
         model = glm::scale(model, glm::vec3(m_sprite_width, m_sprite_height, scale));
 
         // Final transform used by the shader to position the quad.
-        glm::mat4 mvp = proj * model;
+        glm::mat4 model_projection = proj * model;
 
         // Render current sprite
-        sprite_renderer->draw_sheet_index(m_sheet, mvp, m_current_sprite_index);
+        sprite_renderer->draw_sheet_index(m_sheet, model_projection, m_current_sprite_index);
     }
 }

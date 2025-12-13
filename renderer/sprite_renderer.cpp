@@ -61,7 +61,7 @@ namespace renderer
         }
     }
 
-    void SpriteRenderer::draw(const util::Texture &texture, const glm::mat4 &mvp) const
+    void SpriteRenderer::draw(const util::Texture &texture, const glm::mat4 &model_projection) const
     {
         // Full texture UVs
         const auto uv_min = glm::vec2(0.0f, 0.0f);
@@ -69,7 +69,7 @@ namespace renderer
 
         // const method calls non-const draw not allowed, so duplicate minimal path:
         m_shader.use();
-        m_shader.set_mat4("uMVP", mvp);
+        m_shader.set_mat4("uMVP", model_projection);
 
         texture.bind(0);
         m_shader.set_int("uTexture", 0);
@@ -116,12 +116,12 @@ namespace renderer
 
     void SpriteRenderer::draw(
         const util::Texture &texture,
-        const glm::mat4 &mvp,
+        const glm::mat4 &model_projection,
         const glm::vec2 &uv_min,
         const glm::vec2 &uv_max)
     {
         m_shader.use();
-        m_shader.set_mat4("uMVP", mvp);
+        m_shader.set_mat4("uMVP", model_projection);
 
         texture.bind(0);
         m_shader.set_int("uTexture", 0);
@@ -166,9 +166,9 @@ namespace renderer
         glUseProgram(0);
     }
 
-    void SpriteRenderer::draw_sheet_index(const util::SpriteSheet *sheet, const glm::mat4 &mvp, int index)
+    void SpriteRenderer::draw_sheet_index(const util::SpriteSheet *sheet, const glm::mat4 &model_projection, int sprite_index)
     {
-        const auto [uv0, uv1] = sheet->uv_rect(index);
-        draw(sheet->texture(), mvp, uv0, uv1);
+        const auto [uv0, uv1] = sheet->uv_rect(sprite_index);
+        draw(sheet->texture(), model_projection, uv0, uv1);
     }
 }
