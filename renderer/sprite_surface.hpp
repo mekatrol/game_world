@@ -39,6 +39,7 @@ namespace renderer
         int m_sprite_width = 0;
         int m_sprite_height = 0;
         int m_current_sprite_index = 0;
+        // The time that a single frame lives for
         double m_seconds_per_frame = 0.05;
     };
 }

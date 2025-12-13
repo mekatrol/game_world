@@ -19,9 +19,6 @@ namespace renderer
 
     void SpriteSurface::tick(double now, glm::mat4 &proj, renderer::SpriteRenderer *sprite_renderer, float scale)
     {
-        // The time that a single frame lives for
-        const double seconds_per_frame = 0.05;
-
         // The amount of time that has apssed since last frame
         const double elapsed = now - m_last_advance_time;
 
@@ -33,7 +30,7 @@ namespace renderer
             const int steps = static_cast<int>(elapsed / m_seconds_per_frame);
 
             // Index next sprite
-            m_current_sprite_index = (m_current_sprite_index + steps) % m_count + (m_offset * m_count);
+            m_current_sprite_index = m_offset + ((m_current_sprite_index - m_offset + steps) % m_count);
 
             // Keey track of 'now' in frame time
             m_last_advance_time += static_cast<double>(steps) * m_seconds_per_frame;
