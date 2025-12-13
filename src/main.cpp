@@ -61,9 +61,11 @@ int main()
         );
 
         renderer::SpriteSurface sprite_surface_1(&belt_sheet, 0, 16);
-        renderer::SpriteSurface sprite_surface_2(&belt_sheet, 1, 16);
+        renderer::SpriteSurface sprite_surface_2(&belt_sheet, 12, 16);
 
         sprite_surface_2.set_position(100, 300);
+
+        float world_scale = 0.5f;
 
         while (!glfwWindowShouldClose(window))
         {
@@ -86,8 +88,8 @@ int main()
                 static_cast<float>(height), 0.0f,
                 -1.0f, 1.0f);
 
-            sprite_surface_1.tick(now, proj, &sprite_renderer, 0.5f);
-            sprite_surface_2.tick(now, proj, &sprite_renderer, 0.5f);
+            sprite_surface_1.tick(now, proj, &sprite_renderer, world_scale);
+            sprite_surface_2.tick(now, proj, &sprite_renderer, world_scale);
 
             // Input
             if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
