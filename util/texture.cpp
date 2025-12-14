@@ -1,4 +1,4 @@
-#include "util/texture.hpp"
+#include "texture.hpp"
 
 #include <stdexcept>
 #include <utility>
@@ -8,9 +8,6 @@
 
 namespace util
 {
-
-    Texture::Texture() = default;
-
     Texture::Texture(const std::string &path)
     {
         if (!load_from_file(path))
@@ -53,6 +50,8 @@ namespace util
     {
         release();
 
+        // Many sprite pipelines use top-left origin; OpenGL textures are bottom-left.
+        // If your UVs assume top-left, flip the loaded image.
         stbi_set_flip_vertically_on_load(1);
 
         int width = 0;
@@ -92,6 +91,7 @@ namespace util
         glGenTextures(1, &tex);
         glBindTexture(GL_TEXTURE_2D, tex);
 
+        // Sprite rendering typically wants pixel-perfect sampling:
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
@@ -102,7 +102,7 @@ namespace util
         glTexImage2D(
             GL_TEXTURE_2D,
             0,
-            static_cast<GLint>(internal_format),
+            (GLint)internal_format,
             width,
             height,
             0,
@@ -111,13 +111,11 @@ namespace util
             pixels);
 
         glBindTexture(GL_TEXTURE_2D, 0);
-
         stbi_image_free(pixels);
 
         m_texture_id = tex;
         m_width = width;
         m_height = height;
-
         return true;
     }
 
@@ -132,21 +130,6 @@ namespace util
         glBindTexture(GL_TEXTURE_2D, 0);
     }
 
-    GLuint Texture::id() const noexcept
-    {
-        return m_texture_id;
-    }
-
-    int Texture::width() const noexcept
-    {
-        return m_width;
-    }
-
-    int Texture::height() const noexcept
-    {
-        return m_height;
-    }
-
     void Texture::release()
     {
         if (m_texture_id != 0)
@@ -157,5 +140,4 @@ namespace util
         m_width = 0;
         m_height = 0;
     }
-
-} // namespace util
+}

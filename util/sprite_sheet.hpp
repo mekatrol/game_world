@@ -1,12 +1,16 @@
 #pragma once
 
-#include "util/texture.hpp"
+#include "texture.hpp"
 #include <glm/vec2.hpp>
+#include <glm/vec4.hpp>
 #include <string>
-#include <utility>
 
 namespace util
 {
+    // SpriteSheet:
+    // - loads a texture
+    // - interprets it as a grid of same-sized tiles
+    // - provides UV rects for a given sprite index
     class SpriteSheet
     {
     public:
@@ -24,68 +28,72 @@ namespace util
             return m_texture.load_from_file(path) && validate();
         }
 
-        void bind(GLuint slot = 0) const { m_texture.bind(slot); }
-        void unbind() const { m_texture.unbind(); }
+        const Texture &texture() const noexcept { return m_texture; }
+        Texture &texture() noexcept { return m_texture; }
 
-        [[nodiscard]] const Texture &texture() const noexcept { return m_texture; }
-        [[nodiscard]] Texture &texture() noexcept { return m_texture; }
+        int sprite_width() const noexcept { return m_sprite_width; }
+        int sprite_height() const noexcept { return m_sprite_height; }
 
-        [[nodiscard]] int sprite_width() const noexcept { return m_sprite_width; }
-        [[nodiscard]] int sprite_height() const noexcept { return m_sprite_height; }
-
-        [[nodiscard]] int columns() const noexcept
+        int columns() const noexcept
         {
             return (m_sprite_width > 0) ? (m_texture.width() / m_sprite_width) : 0;
         }
 
-        [[nodiscard]] int rows() const noexcept
+        int rows() const noexcept
         {
             return (m_sprite_height > 0) ? (m_texture.height() / m_sprite_height) : 0;
         }
 
-        [[nodiscard]] int sprite_count() const noexcept
+        int sprite_count() const noexcept
         {
             return columns() * rows();
         }
 
-        // Returns UV rectangle: (uv_min, uv_max) in normalized 0..1
-        [[nodiscard]] std::pair<glm::vec2, glm::vec2> uv_rect(int sprite_index) const
+        // Returns UV rectangle as vec4: (u0, v0, u1, v1) in normalized 0..1
+        glm::vec4 uv_rect_vec4(int sprite_index) const
         {
             const int cols = columns();
+
             if (cols <= 0 || m_sprite_width <= 0 || m_sprite_height <= 0)
             {
-                return {glm::vec2(0.0f), glm::vec2(1.0f)};
+                return {0.0f, 0.0f, 1.0f, 1.0f};
             }
 
             const int x = sprite_index % cols;
             const int y = sprite_index / cols;
 
-            const float tex_w = static_cast<float>(m_texture.width());
-            const float tex_h = static_cast<float>(m_texture.height());
+            const float tex_w = (float)m_texture.width();
+            const float tex_h = (float)m_texture.height();
 
             const float u0 = (x * m_sprite_width) / tex_w;
             const float v0 = (y * m_sprite_height) / tex_h;
             const float u1 = ((x + 1) * m_sprite_width) / tex_w;
             const float v1 = ((y + 1) * m_sprite_height) / tex_h;
 
-            return {glm::vec2(u0, v0), glm::vec2(u1, v1)};
+            return {u0, v0, u1, v1};
+        }
+
+        glm::vec4 uv_from_grid(int col, int row, int cols, int rows) const
+        {
+            float u0 = col / (float)cols;
+            float v0 = row / (float)rows;
+            float u1 = (col + 1) / (float)cols;
+            float v1 = (row + 1) / (float)rows;
+
+            return {u0, v0, u1, v1};
         }
 
     private:
-        [[nodiscard]] bool validate() const
+        bool validate() const
         {
             if (m_texture.id() == 0 || m_texture.width() <= 0 || m_texture.height() <= 0)
             {
                 return false;
             }
-
             if (m_sprite_width <= 0 || m_sprite_height <= 0)
             {
                 return false;
             }
-
-            // Optional: require clean divisibility (common for sprite sheets).
-            // If you want to allow partial tiles, remove this.
             if ((m_texture.width() % m_sprite_width) != 0)
             {
                 return false;
@@ -94,7 +102,6 @@ namespace util
             {
                 return false;
             }
-
             return true;
         }
 
@@ -103,4 +110,4 @@ namespace util
         int m_sprite_width{};
         int m_sprite_height{};
     };
-} // namespace util
+}

@@ -16,10 +16,13 @@ target_include_directories(glad PUBLIC
 # App
 add_executable(game
     src/main.cpp
-    util/texture.cpp
-    renderer/sprite_renderer.cpp
-    renderer/sprite_surface.cpp
+    renderer/shader.hpp
     renderer/shader.cpp
+    renderer/sprite_renderer.hpp
+    renderer/sprite_renderer.cpp
+    util/texture.hpp
+    util/texture.cpp
+    util/sprite_sheet.hpp
 )
 
 # Make "renderer/..." and "util/..." includes work from project root

@@ -1,4 +1,4 @@
-#include "renderer/shader.hpp"
+#include "shader.hpp"
 
 #include <fstream>
 #include <sstream>
@@ -11,7 +11,16 @@ namespace renderer
 {
     Shader::Shader(const std::string &vertex_path, const std::string &fragment_path)
     {
-        load_from_files(vertex_path, fragment_path);
+        const auto vs_src = read_file(vertex_path);
+        const auto fs_src = read_file(fragment_path);
+
+        const auto vs = compile_stage(GL_VERTEX_SHADER, vs_src, vertex_path);
+        const auto fs = compile_stage(GL_FRAGMENT_SHADER, fs_src, fragment_path);
+
+        m_program = link_program(vs, fs);
+
+        glDeleteShader(vs);
+        glDeleteShader(fs);
     }
 
     Shader::~Shader()
@@ -32,22 +41,6 @@ namespace renderer
             m_program = std::exchange(other.m_program, 0);
         }
         return *this;
-    }
-
-    void Shader::load_from_files(const std::string &vertex_path, const std::string &fragment_path)
-    {
-        release();
-
-        const auto vs_src = read_file(vertex_path);
-        const auto fs_src = read_file(fragment_path);
-
-        const auto vs = compile_stage(GL_VERTEX_SHADER, vs_src, vertex_path);
-        const auto fs = compile_stage(GL_FRAGMENT_SHADER, fs_src, fragment_path);
-
-        m_program = link_program(vs, fs);
-
-        glDeleteShader(vs);
-        glDeleteShader(fs);
     }
 
     void Shader::use() const
@@ -108,7 +101,6 @@ namespace renderer
             glGetShaderInfoLog(shader, len, &written, log.data());
 
             glDeleteShader(shader);
-
             throw std::runtime_error("Shader compile failed (" + debug_name + "):\n" + log);
         }
 
@@ -136,7 +128,6 @@ namespace renderer
             glGetProgramInfoLog(prog, len, &written, log.data());
 
             glDeleteProgram(prog);
-
             throw std::runtime_error("Program link failed:\n" + log);
         }
 

@@ -1,16 +1,18 @@
 #pragma once
 
-#include <glad/gl.h>
 #include <string>
+#include <glad/gl.h>
 
 namespace util
 {
-
+    // Simple 2D texture wrapper.
+    // Loads PNG/JPG/etc via stb_image into an OpenGL texture.
     class Texture
     {
     public:
-        Texture();
+        Texture() = default;
         explicit Texture(const std::string &path);
+
         ~Texture();
 
         Texture(const Texture &) = delete;
@@ -24,9 +26,9 @@ namespace util
         void bind(GLuint slot = 0) const;
         void unbind() const;
 
-        [[nodiscard]] GLuint id() const noexcept;
-        [[nodiscard]] int width() const noexcept;
-        [[nodiscard]] int height() const noexcept;
+        GLuint id() const noexcept { return m_texture_id; }
+        int width() const noexcept { return m_width; }
+        int height() const noexcept { return m_height; }
 
     private:
         void release();
@@ -36,5 +38,4 @@ namespace util
         int m_width{};
         int m_height{};
     };
-
-} // namespace util
+}

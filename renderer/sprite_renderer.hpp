@@ -1,20 +1,29 @@
 #pragma once
 
+#include <vector>
 #include <glad/gl.h>
-
-#include "renderer/shader.hpp"
-
-#include <glm/mat4x4.hpp>
 #include <glm/vec2.hpp>
+#include <glm/vec4.hpp>
+#include <glm/mat4x4.hpp>
 
-namespace util
-{
-    class Texture;
-    class SpriteSheet;
-}
+#include "shader.hpp"
+#include "util/sprite_sheet.hpp"
 
 namespace renderer
 {
+    // Per-instance payload.
+    // Keep this small and tightly packed.
+    struct SpriteInstance
+    {
+        glm::vec2 pos;  // top-left in pixels (because our ortho uses top-left origin)
+        glm::vec2 size; // size in pixels
+        glm::vec4 uv;   // (u0, v0, u1, v1) in normalized 0..1
+    };
+
+    // Instanced sprite renderer:
+    // - static unit quad (6 verts)
+    // - instance VBO with SpriteInstance data
+    // - 1 draw call per batch (per sprite sheet)
     class SpriteRenderer
     {
     public:
@@ -24,29 +33,31 @@ namespace renderer
         SpriteRenderer(const SpriteRenderer &) = delete;
         SpriteRenderer &operator=(const SpriteRenderer &) = delete;
 
-        SpriteRenderer(SpriteRenderer &&) = delete;
-        SpriteRenderer &operator=(SpriteRenderer &&) = delete;
+        void begin_batch(util::SpriteSheet *sheet, const glm::mat4 &proj);
+        void submit(const SpriteInstance &instance);
+        void end_batch();
 
-        void draw(const util::Texture &texture, const glm::mat4 &mvp) const;
-
-        void draw(
-            const util::Texture &texture,
-            const glm::mat4 &mvp,
-            const glm::vec2 &uv_min,
-            const glm::vec2 &uv_max);
-
-        void draw_sheet_index(
-            const util::SpriteSheet *sheet,
-            const glm::mat4 &mvp,
-            int index);
+        // Optional: reserve capacity to avoid re-allocations.
+        void reserve(size_t n) { m_instances.reserve(n); }
 
     private:
-        void create_quad_buffers();
+        void create_buffers();
         void destroy_buffers();
 
     private:
-        Shader m_shader{};
+        Shader m_shader;
+
         GLuint m_vao{};
-        GLuint m_vbo{};
+        GLuint m_quad_vbo{};
+        GLuint m_instance_vbo{};
+
+        util::SpriteSheet *m_sheet{};
+        glm::mat4 m_proj{1.0f};
+
+        std::vector<SpriteInstance> m_instances;
+
+        // Max instances per batch buffer allocation.
+        // You can increase this (memory tradeoff).
+        static constexpr size_t MaxInstances = 200'000;
     };
 }
