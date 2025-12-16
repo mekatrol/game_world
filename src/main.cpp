@@ -19,6 +19,8 @@
 #include "renderer/sprite_renderer.hpp"
 #include "util/sprite_sheet.hpp"
 
+extern int generate_atlas(int argc, char **argv);
+
 struct FpsCounter
 {
     double last_time = 0.0;
@@ -79,7 +81,7 @@ void draw_text(
     }
 }
 
-int main()
+int main(int argc, char **argv)
 {
     FpsCounter fps_counter;
 
@@ -171,7 +173,7 @@ int main()
                 "FPS: " + std::to_string(fps_counter.fps),
                 5.0f, // left
                 5.0f, // top
-                2.0f // scale
+                2.0f  // scale
             );
 
             sprite_renderer.end_batch();

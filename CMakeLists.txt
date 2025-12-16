@@ -8,12 +8,19 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 add_library(glad STATIC
     external/glad/src/gl.c
 )
-
 target_include_directories(glad PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/external/glad/include
 )
 
-# App
+# Packages (vcpkg)
+find_package(OpenGL REQUIRED)
+find_package(glfw3 REQUIRED)
+find_package(msdfgen CONFIG REQUIRED)
+find_package(nlohmann_json CONFIG REQUIRED)
+find_package(Freetype CONFIG REQUIRED)
+find_package(PNG CONFIG REQUIRED)
+
+# App (runtime)
 add_executable(game
     src/main.cpp
     renderer/shader.hpp
@@ -25,7 +32,6 @@ add_executable(game
     util/sprite_sheet.hpp
 )
 
-# Make "renderer/..." and "util/..." includes work from project root
 target_include_directories(game PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
 )
@@ -34,7 +40,24 @@ target_include_directories(game PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/external/stb
 )
 
-find_package(OpenGL REQUIRED)
-find_package(glfw3 REQUIRED)
+target_link_libraries(game PRIVATE
+    glad
+    glfw
+    OpenGL::GL
+)
 
-target_link_libraries(game PRIVATE glad glfw OpenGL::GL)
+# Atlas generator (offline tool)
+add_executable(atlas_generator
+    util/atlas_generator.cpp
+)
+
+target_include_directories(atlas_generator PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
+target_link_libraries(atlas_generator PRIVATE
+    msdfgen::msdfgen
+    nlohmann_json::nlohmann_json
+    Freetype::Freetype
+    PNG::PNG
+)
