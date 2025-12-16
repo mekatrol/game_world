@@ -30,10 +30,19 @@ namespace renderer
         SpriteRenderer();
         ~SpriteRenderer();
 
+        enum class BatchType
+        {
+            Sprite,
+            Font
+        };
+
         SpriteRenderer(const SpriteRenderer &) = delete;
         SpriteRenderer &operator=(const SpriteRenderer &) = delete;
 
-        void begin_batch(util::SpriteSheet *sheet, const glm::mat4 &proj);
+        void begin_batch(
+            util::SpriteSheet *sheet,
+            const glm::mat4 &proj,
+            BatchType type = BatchType::Sprite);
         void submit(const SpriteInstance &instance);
         void end_batch();
 
@@ -45,7 +54,9 @@ namespace renderer
         void destroy_buffers();
 
     private:
-        Shader m_shader;
+        Shader m_sprite_shader;
+        Shader m_font_shader;
+        BatchType m_batch_type = BatchType::Sprite;
 
         GLuint m_vao{};
         GLuint m_quad_vbo{};

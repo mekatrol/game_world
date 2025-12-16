@@ -57,6 +57,24 @@ namespace renderer
         }
     }
 
+    void Shader::set_float(const std::string &name, float v) const
+    {
+        const auto loc = get_uniform_location(name);
+        if (loc >= 0)
+        {
+            glUniform1f(loc, v);
+        }
+    }
+
+    void Shader::set_vec4(const std::string &name, const glm::vec4 &v) const
+    {
+        const auto loc = get_uniform_location(name);
+        if (loc >= 0)
+        {
+            glUniform4f(loc, v.x, v.y, v.z, v.w);
+        }
+    }
+    
     void Shader::set_mat4(const char *name, const glm::mat4 &value) const
     {
         const auto loc = glGetUniformLocation(m_program, name);
@@ -64,6 +82,11 @@ namespace renderer
         {
             glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(value));
         }
+    }
+
+    GLint Shader::get_uniform_location(const std::string &name) const
+    {
+        return glGetUniformLocation(m_program, name.c_str());
     }
 
     std::string Shader::read_file(const std::string &path)

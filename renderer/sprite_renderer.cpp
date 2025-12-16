@@ -6,12 +6,16 @@
 namespace renderer
 {
     SpriteRenderer::SpriteRenderer()
-        : m_shader("assets/shaders/sprite.vert", "assets/shaders/sprite.frag")
+        : m_sprite_shader("assets/shaders/sprite.vert", "assets/shaders/sprite.frag"), m_font_shader("assets/shaders/sprite.vert", "assets/shaders/font.frag")
     {
         create_buffers();
 
-        m_shader.use();
-        m_shader.set_int("uTexture", 0);
+        m_sprite_shader.use();
+        m_sprite_shader.set_int("uTexture", 0);
+
+        m_font_shader.use();
+        m_font_shader.set_int("uTexture", 0);
+
         glUseProgram(0);
     }
 
@@ -30,8 +34,7 @@ namespace renderer
 
             0.0f, 0.0f,
             1.0f, 1.0f,
-            0.0f, 1.0f
-        };
+            0.0f, 1.0f};
 
         glGenVertexArrays(1, &m_vao);
         glBindVertexArray(m_vao);
@@ -43,7 +46,7 @@ namespace renderer
 
         // aPos at location=0
         glEnableVertexAttribArray(0);
-        glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
+        glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void *)0);
 
         // Instance buffer (dynamic)
         glGenBuffers(1, &m_instance_vbo);
@@ -53,17 +56,17 @@ namespace renderer
         // Instance attributes:
         // layout(location=1) vec2 iPos
         glEnableVertexAttribArray(1);
-        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(SpriteInstance), (void*)offsetof(SpriteInstance, pos));
+        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(SpriteInstance), (void *)offsetof(SpriteInstance, pos));
         glVertexAttribDivisor(1, 1);
 
         // layout(location=2) vec2 iSize
         glEnableVertexAttribArray(2);
-        glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(SpriteInstance), (void*)offsetof(SpriteInstance, size));
+        glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(SpriteInstance), (void *)offsetof(SpriteInstance, size));
         glVertexAttribDivisor(2, 1);
 
         // layout(location=3) vec4 iUV
         glEnableVertexAttribArray(3);
-        glVertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, sizeof(SpriteInstance), (void*)offsetof(SpriteInstance, uv));
+        glVertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, sizeof(SpriteInstance), (void *)offsetof(SpriteInstance, uv));
         glVertexAttribDivisor(3, 1);
 
         glBindBuffer(GL_ARRAY_BUFFER, 0);
@@ -89,14 +92,18 @@ namespace renderer
         }
     }
 
-    void SpriteRenderer::begin_batch(util::SpriteSheet* sheet, const glm::mat4& proj)
+    void SpriteRenderer::begin_batch(
+        util::SpriteSheet *sheet,
+        const glm::mat4 &proj,
+        BatchType type)
     {
         m_sheet = sheet;
         m_proj = proj;
+        m_batch_type = type;
         m_instances.clear();
     }
 
-    void SpriteRenderer::submit(const SpriteInstance& instance)
+    void SpriteRenderer::submit(const SpriteInstance &instance)
     {
         m_instances.push_back(instance);
     }
@@ -116,8 +123,19 @@ namespace renderer
             throw std::runtime_error("SpriteRenderer: batch exceeded MaxInstances");
         }
 
-        m_shader.use();
-        m_shader.set_mat4("uProj", m_proj);
+        Shader &shader =
+            (m_batch_type == BatchType::Font)
+                ? m_font_shader
+                : m_sprite_shader;
+
+        shader.use();
+        shader.set_mat4("uProj", m_proj);
+
+        if (m_batch_type == BatchType::Font)
+        {
+            shader.set_vec4("uFontColor", {1, 1, 1, 1});
+            shader.set_float("uPxRange", 6.0f);
+        }
 
         // Bind texture once per batch (sheet)
         m_sheet->texture().bind(0);

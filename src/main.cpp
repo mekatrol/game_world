@@ -160,7 +160,7 @@ int main(int argc, char **argv)
             // Pixel-perfect 2D projection (top-left origin).
             const glm::mat4 proj = glm::ortho(0.0f, (float)w, (float)h, 0.0f);
 
-            sprite_renderer.begin_batch(&sheet, proj);
+            sprite_renderer.begin_batch(&sheet, proj, renderer::SpriteRenderer::BatchType::Sprite);
 
             // Submit per-instance data.
             // In a real engine, you’d iterate visible entities, choose their frame index,
@@ -182,16 +182,15 @@ int main(int argc, char **argv)
 
             sprite_renderer.end_batch();
 
-            sprite_renderer.begin_batch(&font.sheet(), proj);
+            sprite_renderer.begin_batch(&font.sheet(), proj, renderer::SpriteRenderer::BatchType::Font);
 
-            sprite_renderer.begin_batch(&font.sheet(), proj);
             draw_text_msdf(
                 sprite_renderer,
                 font,
                 "FPS: " + std::to_string(fps_counter.fps),
-                5.0f,
-                5.0f,
-                2.0f);
+                1.0f,
+                1.0f,
+                1.0f);
             sprite_renderer.end_batch();
 
             glfwSwapBuffers(window);
