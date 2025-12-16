@@ -18,6 +18,7 @@
 
 #include "renderer/sprite_renderer.hpp"
 #include "util/sprite_sheet.hpp"
+#include "util/msdf_font.hpp"
 
 extern int generate_atlas(int argc, char **argv);
 
@@ -44,40 +45,42 @@ static void framebuffer_size_callback(GLFWwindow *, int w, int h)
     glViewport(0, 0, w, h);
 }
 
-void draw_text(
+void draw_text_msdf(
     renderer::SpriteRenderer &renderer,
-    util::SpriteSheet &font,
+    const util::MsdfFont &font,
     const std::string &text,
     float x,
-    float y,
+    float y, // top-left anchor (same “feel” as your current function)
     float scale = 1.0f)
 {
-    constexpr int FONT_COLS = 18;
-    constexpr int FONT_ROWS = 7;
-
     float cursor_x = x;
 
-    for (char c : text)
+    // Treat y as top-left; convert to a baseline using the font's measured line height.
+    const float baseline_y = y + font.line_height() * scale;
+
+    for (unsigned char c : text)
     {
-        int ascii = (int)c;
-        if (ascii < 32 || ascii > 126)
+        // Basic ASCII set your atlas_generator emits (32..126). :contentReference[oaicite:4]{index=4}
+        if (c < 32 || c > 126)
         {
-            cursor_x += font.sprite_width() * scale;
+            cursor_x += font.line_height() * 0.5f * scale;
             continue;
         }
 
-        int index = ascii - 32;
-        int col = index % FONT_COLS;
-        int row = index / FONT_COLS;
+        const util::MsdfGlyph *g = font.glyph((int)c);
+        if (!g)
+            continue;
+
+        // Position quad using bearings (baseline-aligned)
+        const float gx = cursor_x + g->bearingX * scale;
+        const float gy = baseline_y - g->bearingY * scale;
 
         renderer.submit(renderer::SpriteInstance{
-            .pos = {cursor_x, y},
-            .size = {
-                font.sprite_width() * scale,
-                font.sprite_height() * scale},
-            .uv = font.uv_from_grid(col, row, FONT_COLS, FONT_ROWS)});
+            .pos = {gx, gy},
+            .size = {g->w * scale, g->h * scale},
+            .uv = g->uv});
 
-        cursor_x += font.sprite_width() * scale;
+        cursor_x += g->advance * scale;
     }
 }
 
@@ -120,7 +123,17 @@ int main(int argc, char **argv)
 
         // Example sprite sheet: adjust path + tile size to match your image.
         util::SpriteSheet sheet("assets/entity/transport-belt/transport-belt.png", 128, 128);
-        util::SpriteSheet font_sheet("assets/fonts/font.png", 5, 7);
+
+        util::MsdfFont font;
+        font.load("assets/fonts/font.json", "assets/fonts/font.png");
+        font.sheet().texture().set_filtering(GL_LINEAR, GL_LINEAR);
+
+        GLuint fontTexId = font.sheet().texture().id();
+
+        glBindTexture(GL_TEXTURE_2D, fontTexId);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glBindTexture(GL_TEXTURE_2D, 0);
 
         // Simulate many entities: 10k sprites in a grid.
         // Scale this up to 100k+ to test throughput (and add culling in real usage).
@@ -167,15 +180,18 @@ int main(int argc, char **argv)
                 });
             }
 
-            draw_text(
-                sprite_renderer,
-                font_sheet,
-                "FPS: " + std::to_string(fps_counter.fps),
-                5.0f, // left
-                5.0f, // top
-                2.0f  // scale
-            );
+            sprite_renderer.end_batch();
 
+            sprite_renderer.begin_batch(&font.sheet(), proj);
+
+            sprite_renderer.begin_batch(&font.sheet(), proj);
+            draw_text_msdf(
+                sprite_renderer,
+                font,
+                "FPS: " + std::to_string(fps_counter.fps),
+                5.0f,
+                5.0f,
+                2.0f);
             sprite_renderer.end_batch();
 
             glfwSwapBuffers(window);

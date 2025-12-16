@@ -30,6 +30,7 @@ add_executable(game
     util/texture.hpp
     util/texture.cpp
     util/sprite_sheet.hpp
+    util/msdf_font.hpp
 )
 
 target_include_directories(game PRIVATE
@@ -44,6 +45,10 @@ target_link_libraries(game PRIVATE
     glad
     glfw
     OpenGL::GL
+    msdfgen::msdfgen
+    nlohmann_json::nlohmann_json
+    Freetype::Freetype
+    PNG::PNG
 )
 
 # Atlas generator (offline tool)

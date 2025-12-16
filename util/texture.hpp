@@ -23,6 +23,8 @@ namespace util
 
         bool load_from_file(const std::string &path);
 
+        void set_filtering(GLenum min_filter, GLenum mag_filter);
+
         void bind(GLuint slot = 0) const;
         void unbind() const;
 
