@@ -1,5 +1,6 @@
 #include <msdfgen.h>
 #include <msdfgen-ext.h>
+#include <filesystem>
 
 #include <ft2build.h>
 #include FT_FREETYPE_H
@@ -252,7 +253,9 @@ int main(int argc, char **argv)
         rowH = std::max(rowH, gh);
     }
 
-    SavePNG("font.png", atlasSize, atlasSize, atlas);
+    std::filesystem::create_directories("assets/fonts");
+
+    SavePNG("assets/fonts/font.png", atlasSize, atlasSize, atlas);
 
     json j;
     j["atlasSize"] = atlasSize;
@@ -271,7 +274,7 @@ int main(int argc, char **argv)
             {"v1", float(g.y + g.h) / atlasSize}};
     }
 
-    std::ofstream("font.json") << j.dump(2);
+    std::ofstream("assets/fonts/font.json") << j.dump(2);
 
     msdfgen::destroyFont(font);
     msdfgen::deinitializeFreetype(msft);
