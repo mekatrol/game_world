@@ -2,11 +2,21 @@
     "version": 3,
     "configurePresets": [
         {
-            "name": "vcpkg-release",
+            "name": "vcpkg-debug",
             "generator": "Ninja",
-            "binaryDir": "${sourceDir}/build",
+            "binaryDir": "${sourceDir}/build-debug",
             "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Release",
+                "CMAKE_BUILD_TYPE": "Debug",
+                "CMAKE_TOOLCHAIN_FILE": "/home/dad/repos/vcpkg/scripts/buildsystems/vcpkg.cmake",
+                "VCPKG_TARGET_TRIPLET": "x64-linux"
+            }
+        },
+        {
+            "name": "vcpkg-relwithdebinfo",
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/build-relwithdebinfo",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "RelWithDebInfo",
                 "CMAKE_TOOLCHAIN_FILE": "/home/dad/repos/vcpkg/scripts/buildsystems/vcpkg.cmake",
                 "VCPKG_TARGET_TRIPLET": "x64-linux"
             }
@@ -14,8 +24,12 @@
     ],
     "buildPresets": [
         {
-            "name": "vcpkg-release",
-            "configurePreset": "vcpkg-release"
+            "name": "vcpkg-debug",
+            "configurePreset": "vcpkg-debug"
+        },
+        {
+            "name": "vcpkg-relwithdebinfo",
+            "configurePreset": "vcpkg-relwithdebinfo"
         }
     ]
 }

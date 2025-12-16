@@ -5,7 +5,7 @@
             "name": "Debug (CMake)",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/build/game",
+            "program": "${workspaceFolder}/build-debug/game",
             "args": [],
             "cwd": "${workspaceFolder}",
             "stopAtEntry": false,

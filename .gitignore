@@ -39,5 +39,6 @@
 
 # debug information files
 *.dwo
-build
 assets/entity
+build
+build-debug
