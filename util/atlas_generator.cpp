@@ -115,9 +115,6 @@ int main(int argc, char **argv)
     FT_Set_Pixel_Sizes(face, 0, glyphPxHeight);
     double pxPerUnit = 0.0;
 
-    const int unitsPerEm = (face->units_per_EM > 0) ? face->units_per_EM : 2048;
-    pxPerUnit = double(glyphPxHeight) / double(unitsPerEm);
-
     // ---- msdfgen for outlines ----
     msdfgen::FreetypeHandle *msft = msdfgen::initializeFreetype();
     msdfgen::FontHandle *font = msdfgen::loadFont(msft, argv[1]);
