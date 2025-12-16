@@ -120,7 +120,7 @@ int main(int argc, char **argv)
 
         // Example sprite sheet: adjust path + tile size to match your image.
         util::SpriteSheet sheet("assets/entity/transport-belt/transport-belt.png", 128, 128);
-        util::SpriteSheet font_sheet("assets/fonts/charmap-oldschool_white.png", 5, 7);
+        util::SpriteSheet font_sheet("assets/fonts/font.png", 5, 7);
 
         // Simulate many entities: 10k sprites in a grid.
         // Scale this up to 100k+ to test throughput (and add culling in real usage).
