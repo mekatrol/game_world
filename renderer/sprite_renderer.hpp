@@ -2,6 +2,7 @@
 
 #include <unordered_map>
 #include <vector>
+#include <span>
 
 #include <glad/gl.h>
 #include <glm/mat4x4.hpp>
@@ -18,9 +19,8 @@ namespace renderer
         glm::vec2 pos;
         glm::vec2 size;
         glm::vec4 uv;
-        unsigned int frame_offset;
         unsigned int frame_index;
-        unsigned int frame_count;
+        std::span<const unsigned int> frame_sequence;
         double seconds_per_frame;
     };
 

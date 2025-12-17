@@ -12,6 +12,19 @@ static void framebuffer_size_callback(GLFWwindow *, int w, int h)
     glViewport(0, 0, w, h);
 }
 
+static std::vector<unsigned int> offset_frames(const std::vector<unsigned int> &frames, unsigned int offset)
+{
+    std::vector<unsigned int> new_frames;
+    new_frames.reserve(frames.size());
+
+    for (auto frame : frames)
+    {
+        new_frames.push_back(frame + offset);
+    }
+
+    return new_frames;
+}
+
 int main(int argc, char **argv)
 {
     FpsCounter fps_counter;
@@ -58,14 +71,48 @@ int main(int argc, char **argv)
 
     const int sprite_count = 100000;
 
+    std::vector<unsigned int> transport_1_belt_frames = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
+    std::span<const unsigned int> transport_belt_frame_sequence_1{transport_1_belt_frames};
+
+    std::vector<unsigned int> transport_2_belt_frames = offset_frames(transport_1_belt_frames, 16);
+    std::span<const unsigned int> transport_belt_frame_sequence_2{transport_2_belt_frames};
+
+    std::vector<unsigned int> transport_3_belt_frames = offset_frames(transport_1_belt_frames, 128);
+    std::span<const unsigned int> transport_belt_frame_sequence_3{transport_3_belt_frames};
+
+    std::vector<unsigned int> worm_attack_frames = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1};
+    std::span<const unsigned int> worm_attack_frame_sequence{worm_attack_frames};
+
     std::vector<renderer::SpriteInstance> instances(sprite_count);
+
+    const unsigned int SEQUENCE_COUNT = 4;
 
     for (int i = 0; i < sprite_count; ++i)
     {
-        instances[i].frame_offset = 0;
         instances[i].frame_index = 0;
-        instances[i].frame_count = 16;
-        instances[i].seconds_per_frame = 0.05;
+
+        switch (i % SEQUENCE_COUNT)
+        {
+        case 0:
+            instances[i].frame_sequence = transport_belt_frame_sequence_1;
+            instances[i].seconds_per_frame = 0.05;
+            break;
+        case 1:
+            instances[i].frame_sequence = transport_belt_frame_sequence_2;
+            instances[i].seconds_per_frame = 0.05;
+            break;
+        case 2:
+            instances[i].frame_sequence = transport_belt_frame_sequence_3;
+            instances[i].seconds_per_frame = 0.05;
+            break;
+        case 3:
+            instances[i].frame_sequence = worm_attack_frame_sequence;
+            instances[i].seconds_per_frame = 0.1;
+            break;
+        default:
+            throw std::runtime_error("Invalid index");
+            break;
+        }
     }
 
     double prev_advance_time = glfwGetTime();
@@ -104,24 +151,30 @@ int main(int argc, char **argv)
             const float x = (float)(i % cols) * 32.0f;
             const float y = (float)(i / cols) * 32.0f;
 
-            auto &inst = instances[i];
-            const int frame = static_cast<int>(anim_time / inst.seconds_per_frame) % inst.frame_count;
-            inst.frame_index = inst.frame_offset + frame;
+            auto &instance = instances[i];
+            const unsigned int frame_sequence_index = static_cast<int>(anim_time / instance.seconds_per_frame) % instance.frame_sequence.size();
+            instance.frame_index = instance.frame_sequence[frame_sequence_index];
 
             renderer::SpriteInstance draw_instance{
                 .pos = {x, y},
                 .size = {64.0f, 64.0f},
             };
 
-            if ((i & 1) == 0)
+            switch (i % SEQUENCE_COUNT)
             {
-                draw_instance.uv = transport_belt_sheet.uv_rect_vec4(inst.frame_index);
+            case 0:
+            case 1:
+            case 2:
+                draw_instance.uv = transport_belt_sheet.uv_rect_vec4(instance.frame_index);
                 sprite_renderer.submit(&transport_belt_sheet, draw_instance);
-            }
-            else
-            {
-                draw_instance.uv = worm_attack_sheet.uv_rect_vec4(inst.frame_index);
+                break;
+            case 3:
+                draw_instance.uv = worm_attack_sheet.uv_rect_vec4(instance.frame_index);
                 sprite_renderer.submit(&worm_attack_sheet, draw_instance);
+                break;
+            default:
+                throw std::runtime_error("Invalid index");
+                break;
             }
         }
 

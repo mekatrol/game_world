@@ -22,7 +22,7 @@ namespace renderer
 
     SpriteRenderer::~SpriteRenderer()
     {
-        destroy_buffers();
+        release();
     }
 
     void SpriteRenderer::begin_batch(const glm::mat4 &proj, BatchType type)
@@ -37,6 +37,12 @@ namespace renderer
         if (!sheet)
         {
             return;
+        }
+
+        if (m_buckets.bucket_count() >= MaxInstances)
+        {
+            end_batch();
+            begin_batch(m_proj, m_batch_type);
         }
 
         m_buckets[sheet].push_back(instance);
