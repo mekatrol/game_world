@@ -15,9 +15,13 @@ namespace renderer
     // Keep this small and tightly packed.
     struct SpriteInstance
     {
-        glm::vec2 pos;  // top-left in pixels (because our ortho uses top-left origin)
-        glm::vec2 size; // size in pixels
-        glm::vec4 uv;   // (u0, v0, u1, v1) in normalized 0..1
+        glm::vec2 pos;             // top-left in pixels (because our ortho uses top-left origin)
+        glm::vec2 size;            // size in pixels
+        glm::vec4 uv;              // (u0, v0, u1, v1) in normalized 0..1
+        unsigned int frame_offset; // The offset of the first sprite in the sprite sheet
+        unsigned int frame_index;  // Current sprite index
+        unsigned int frame_count;  // The total number of sprites for this animation
+        double seconds_per_frame;  // The time that a single frame lives for
     };
 
     // Instanced sprite renderer:
