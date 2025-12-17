@@ -12,45 +12,6 @@ static void framebuffer_size_callback(GLFWwindow *, int w, int h)
     glViewport(0, 0, w, h);
 }
 
-void draw_text_msdf(
-    renderer::SpriteRenderer &renderer,
-    const util::MsdfFont &font,
-    const std::string &text,
-    float x,
-    float y, // top-left anchor (same “feel” as your current function)
-    float scale = 1.0f)
-{
-    float cursor_x = x;
-
-    // Treat y as top-left; convert to a baseline using the font's measured line height.
-    const float baseline_y = y + font.line_height() * scale;
-
-    for (unsigned char c : text)
-    {
-        // Basic ASCII set your atlas_generator emits (32..126). :contentReference[oaicite:4]{index=4}
-        if (c < 32 || c > 126)
-        {
-            cursor_x += font.line_height() * 0.5f * scale;
-            continue;
-        }
-
-        const util::MsdfGlyph *g = font.glyph((int)c);
-        if (!g)
-            continue;
-
-        // Position quad using bearings (baseline-aligned)
-        const float gx = cursor_x + g->bearingX * scale;
-        const float gy = baseline_y - g->bearingY * scale;
-
-        renderer.submit(renderer::SpriteInstance{
-            .pos = {gx, gy},
-            .size = {g->w * scale, g->h * scale},
-            .uv = g->uv});
-
-        cursor_x += g->advance * scale;
-    }
-}
-
 int main(int argc, char **argv)
 {
     FpsCounter fps_counter;
@@ -151,12 +112,11 @@ int main(int argc, char **argv)
 
             sprite_renderer.begin_batch(&font.sheet(), proj, renderer::SpriteRenderer::BatchType::Font);
 
-            draw_text_msdf(
+            font.render_text(
                 sprite_renderer,
-                font,
                 "FPS: " + std::to_string(fps_counter.fps),
-                1.0f,
-                1.0f,
+                10.0f,
+                10.0f,
                 1.0f);
 
             sprite_renderer.end_batch();

@@ -92,6 +92,44 @@ namespace util
 
         float line_height() const noexcept { return m_line_height; }
 
+        void render_text(
+            renderer::SpriteRenderer &renderer,
+            const std::string &text,
+            float x,
+            float y,
+            float scale = 1.0f)
+        {
+            float cursor_x = x;
+
+            // Treat y as top-left; convert to a baseline using the font's measured line height.
+            const float baseline_y = y + line_height() * scale;
+
+            for (unsigned char c : text)
+            {
+                // Basic ASCII set your atlas_generator emits (32..126). :contentReference[oaicite:4]{index=4}
+                if (c < 32 || c > 126)
+                {
+                    cursor_x += line_height() * 0.5f * scale;
+                    continue;
+                }
+
+                const util::MsdfGlyph *g = glyph((int)c);
+                if (!g)
+                    continue;
+
+                // Position quad using bearings (baseline-aligned)
+                const float gx = cursor_x + g->bearingX * scale;
+                const float gy = baseline_y - g->bearingY * scale;
+
+                renderer.submit(renderer::SpriteInstance{
+                    .pos = {gx, gy},
+                    .size = {g->w * scale, g->h * scale},
+                    .uv = g->uv});
+
+                cursor_x += g->advance * scale;
+            }
+        }
+
     private:
         SpriteSheet m_sheet{};
         int m_atlas_size = 0;
