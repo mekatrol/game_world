@@ -2,10 +2,14 @@
 #include <GLFW/glfw3.h>
 #include <glm/gtc/matrix_transform.hpp>
 
+#include <unordered_map>
+#include <memory>
+
 #include "renderer/sprite_renderer.hpp"
 #include "util/fps_counter.hpp"
 #include "util/sprite_sheet.hpp"
 #include "util/msdf_font.hpp"
+#include "util/animation_library.hpp"
 
 static void framebuffer_size_callback(GLFWwindow *, int w, int h)
 {
@@ -59,62 +63,55 @@ int main(int argc, char **argv)
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-    renderer::SpriteRenderer sprite_renderer;
+    const int sprite_count = 100000;
 
-    // Sheets
-    util::SpriteSheet transport_belt_sheet("assets/entity/transport-belt/transport-belt.png", 16, 20, false);
-    util::SpriteSheet fast_transport_belt_sheet("assets/entity/fast-transport-belt/fast-transport-belt.png", 32, 20, false);
-    util::SpriteSheet worm_attack_sheet("assets/entity/worm/worm-attack-2.png", 4, 4, false);
+    // Load animation definitions from json
+    const auto animations = util::load_animation_library("assets/animations");
+
+    std::unordered_map<std::string, std::unique_ptr<util::SpriteSheet>> sheets_by_key;
+    for (const auto &[key, def] : animations)
+    {
+        sheets_by_key.emplace(
+            key,
+            std::make_unique<util::SpriteSheet>(
+                def.asset_file,
+                def.sprite_count_x,
+                def.sprite_count_y,
+                false));
+    }
+
+    // Build a flat list of (sheet, sequence) pairs to cycle through
+    struct RuntimeAnim
+    {
+        const util::AnimationDef *def;
+        const util::FrameSequence *sequence;
+    };
+
+    std::vector<RuntimeAnim> runtime_anims;
+    for (const auto &[_, def] : animations)
+    {
+        for (const auto &[_, seq] : def.sequences)
+        {
+            runtime_anims.push_back({&def, &seq});
+        }
+    }
+
+    std::vector<renderer::SpriteInstance> instances(sprite_count);
+
+    for (int i = 0; i < sprite_count; ++i)
+    {
+        const auto &ra = runtime_anims[static_cast<size_t>(i) % runtime_anims.size()];
+
+        instances[i].frame_index = 0;
+        instances[i].frame_sequence = std::span<const unsigned int>(ra.sequence->frames);
+        instances[i].seconds_per_frame = ra.sequence->seconds_per_frame;
+    }
+
+    renderer::SpriteRenderer sprite_renderer;
 
     util::MsdfFont font;
     font.load("assets/fonts/font.json", "assets/fonts/font.png");
     font.sheet().texture().set_filtering(GL_LINEAR, GL_LINEAR);
-
-    const int sprite_count = 100000;
-
-    std::vector<unsigned int> transport_1_belt_frames = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
-    std::span<const unsigned int> transport_belt_frame_sequence_1{transport_1_belt_frames};
-
-    std::vector<unsigned int> transport_2_belt_frames = offset_frames(transport_1_belt_frames, 16);
-    std::span<const unsigned int> transport_belt_frame_sequence_2{transport_2_belt_frames};
-
-    std::vector<unsigned int> transport_3_belt_frames = offset_frames(transport_1_belt_frames, 128);
-    std::span<const unsigned int> transport_belt_frame_sequence_3{transport_3_belt_frames};
-
-    std::vector<unsigned int> worm_attack_frames = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1};
-    std::span<const unsigned int> worm_attack_frame_sequence{worm_attack_frames};
-
-    std::vector<renderer::SpriteInstance> instances(sprite_count);
-
-    const unsigned int SEQUENCE_COUNT = 4;
-
-    for (int i = 0; i < sprite_count; ++i)
-    {
-        instances[i].frame_index = 0;
-
-        switch (i % SEQUENCE_COUNT)
-        {
-        case 0:
-            instances[i].frame_sequence = transport_belt_frame_sequence_1;
-            instances[i].seconds_per_frame = 0.05;
-            break;
-        case 1:
-            instances[i].frame_sequence = transport_belt_frame_sequence_2;
-            instances[i].seconds_per_frame = 0.05;
-            break;
-        case 2:
-            instances[i].frame_sequence = transport_belt_frame_sequence_3;
-            instances[i].seconds_per_frame = 0.03;
-            break;
-        case 3:
-            instances[i].frame_sequence = worm_attack_frame_sequence;
-            instances[i].seconds_per_frame = 0.1;
-            break;
-        default:
-            throw std::runtime_error("Invalid index");
-            break;
-        }
-    }
 
     double prev_advance_time = glfwGetTime();
     double anim_time = 0.0;
@@ -161,25 +158,11 @@ int main(int argc, char **argv)
                 .size = {64.0f, 64.0f},
             };
 
-            switch (i % SEQUENCE_COUNT)
-            {
-            case 0:
-            case 1:
-                draw_instance.uv = transport_belt_sheet.uv_rect_vec4(instance.frame_index);
-                sprite_renderer.submit(&transport_belt_sheet, draw_instance);
-                break;
-            case 2:
-                draw_instance.uv = fast_transport_belt_sheet.uv_rect_vec4(instance.frame_index);
-                sprite_renderer.submit(&fast_transport_belt_sheet, draw_instance);
-                break;
-            case 3:
-                draw_instance.uv = worm_attack_sheet.uv_rect_vec4(instance.frame_index);
-                sprite_renderer.submit(&worm_attack_sheet, draw_instance);
-                break;
-            default:
-                throw std::runtime_error("Invalid index");
-                break;
-            }
+            const auto &ra = runtime_anims[static_cast<size_t>(i) % runtime_anims.size()];
+            auto *sheet = sheets_by_key.at(ra.def->key).get();
+
+            draw_instance.uv = sheet->uv_rect_vec4(instance.frame_index);
+            sprite_renderer.submit(sheet, draw_instance);
         }
 
         sprite_renderer.end_batch();
@@ -201,9 +184,12 @@ int main(int argc, char **argv)
     }
 
     sprite_renderer.release();
-    transport_belt_sheet.texture().release();
-    fast_transport_belt_sheet.texture().release();
-    worm_attack_sheet.texture().release();
+
+    for (auto &[key, sheet] : sheets_by_key)
+    {
+        sheet->texture().release();
+    }
+    
     font.sheet().texture().release();
 
     glfwDestroyWindow(window);

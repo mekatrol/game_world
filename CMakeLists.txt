@@ -31,6 +31,8 @@ add_executable(game
     util/texture.cpp
     util/sprite_sheet.hpp
     util/msdf_font.hpp
+    util/animation_library.hpp
+    util/animation_library.cpp
 )
 
 target_include_directories(game PRIVATE
