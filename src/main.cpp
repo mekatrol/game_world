@@ -63,6 +63,7 @@ int main(int argc, char **argv)
 
     // Sheets
     util::SpriteSheet transport_belt_sheet("assets/entity/transport-belt/transport-belt.png", 16, 20, false);
+    util::SpriteSheet fast_transport_belt_sheet("assets/entity/fast-transport-belt/fast-transport-belt.png", 32, 20, false);
     util::SpriteSheet worm_attack_sheet("assets/entity/worm/worm-attack-2.png", 4, 4, false);
 
     util::MsdfFont font;
@@ -103,7 +104,7 @@ int main(int argc, char **argv)
             break;
         case 2:
             instances[i].frame_sequence = transport_belt_frame_sequence_3;
-            instances[i].seconds_per_frame = 0.05;
+            instances[i].seconds_per_frame = 0.03;
             break;
         case 3:
             instances[i].frame_sequence = worm_attack_frame_sequence;
@@ -164,9 +165,12 @@ int main(int argc, char **argv)
             {
             case 0:
             case 1:
-            case 2:
                 draw_instance.uv = transport_belt_sheet.uv_rect_vec4(instance.frame_index);
                 sprite_renderer.submit(&transport_belt_sheet, draw_instance);
+                break;
+            case 2:
+                draw_instance.uv = fast_transport_belt_sheet.uv_rect_vec4(instance.frame_index);
+                sprite_renderer.submit(&fast_transport_belt_sheet, draw_instance);
                 break;
             case 3:
                 draw_instance.uv = worm_attack_sheet.uv_rect_vec4(instance.frame_index);
@@ -198,6 +202,7 @@ int main(int argc, char **argv)
 
     sprite_renderer.release();
     transport_belt_sheet.texture().release();
+    fast_transport_belt_sheet.texture().release();
     worm_attack_sheet.texture().release();
     font.sheet().texture().release();
 
