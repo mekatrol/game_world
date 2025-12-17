@@ -1,6 +1,7 @@
 #include "sprite_renderer.hpp"
 
-#include <cstddef> // offsetof
+#include <algorithm> // std::min
+#include <cstddef>   // offsetof
 #include <stdexcept>
 
 namespace renderer
@@ -22,6 +23,70 @@ namespace renderer
     SpriteRenderer::~SpriteRenderer()
     {
         destroy_buffers();
+    }
+
+    void SpriteRenderer::begin_batch(const glm::mat4 &proj, BatchType type)
+    {
+        m_proj = proj;
+        m_batch_type = type;
+        m_buckets.clear();
+    }
+
+    void SpriteRenderer::submit(util::SpriteSheet *sheet, const SpriteInstance &instance)
+    {
+        if (!sheet)
+        {
+            return;
+        }
+
+        m_buckets[sheet].push_back(instance);
+    }
+
+    void SpriteRenderer::end_batch()
+    {
+        if (m_buckets.empty())
+        {
+            return;
+        }
+
+        Shader &shader = (m_batch_type == BatchType::Font) ? m_font_shader : m_sprite_shader;
+
+        shader.use();
+        shader.set_mat4("u_proj", m_proj);
+
+        if (m_batch_type == BatchType::Font)
+        {
+            shader.set_vec4("u_color", {1.0f, 1.0f, 1.0f, 1.0f});
+        }
+
+        glBindVertexArray(m_vao);
+        glBindBuffer(GL_ARRAY_BUFFER, m_instance_vbo);
+
+        // If you are not compiling with C++17, replace this loop (see below).
+        for (auto &[sheet, instances] : m_buckets)
+        {
+            if (!sheet || instances.empty())
+            {
+                continue;
+            }
+
+            sheet->texture().bind(0);
+
+            std::size_t offset = 0;
+            while (offset < instances.size())
+            {
+                const std::size_t count = std::min<std::size_t>(MaxInstances, instances.size() - offset);
+
+                glBufferSubData(GL_ARRAY_BUFFER, 0, count * sizeof(SpriteInstance), instances.data() + offset);
+                glDrawArraysInstanced(GL_TRIANGLES, 0, 6, (GLsizei)count);
+
+                offset += count;
+            }
+        }
+
+        glBindVertexArray(0);
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+        glUseProgram(0);
     }
 
     void SpriteRenderer::create_buffers()
@@ -53,7 +118,6 @@ namespace renderer
         glBindBuffer(GL_ARRAY_BUFFER, m_instance_vbo);
         glBufferData(GL_ARRAY_BUFFER, MaxInstances * sizeof(SpriteInstance), nullptr, GL_STREAM_DRAW);
 
-        // Instance attributes:
         // layout(location=1) vec2 i_pos
         glEnableVertexAttribArray(1);
         glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(SpriteInstance), (void *)offsetof(SpriteInstance, pos));
@@ -92,67 +156,4 @@ namespace renderer
         }
     }
 
-    void SpriteRenderer::begin_batch(
-        util::SpriteSheet *sheet,
-        const glm::mat4 &proj,
-        BatchType type)
-    {
-        m_sheet = sheet;
-        m_proj = proj;
-        m_batch_type = type;
-        m_instances.clear();
-    }
-
-    void SpriteRenderer::submit(const SpriteInstance &instance)
-    {
-        // Add instance to end
-        m_instances.push_back(instance);
-    }
-
-    void SpriteRenderer::end_batch()
-    {
-        if (!m_sheet || m_instances.empty())
-        {
-            return;
-        }
-
-        // If you exceed MaxInstances, you can:
-        // - split into multiple draws, OR
-        // - increase MaxInstances
-        if (m_instances.size() > MaxInstances)
-        {
-            throw std::runtime_error("SpriteRenderer: batch exceeded MaxInstances");
-        }
-
-        // Determine shader based on batch type (text or sprites)
-        Shader &shader =
-            (m_batch_type == BatchType::Font)
-                ? m_font_shader
-                : m_sprite_shader;
-
-        shader.use();
-        shader.set_mat4("u_proj", m_proj);
-
-        // Fonts require extra params
-        if (m_batch_type == BatchType::Font)
-        {
-            shader.set_vec4("u_color", {1.0f, 1.0f, 1.0f, 1.0f});
-        }
-
-        // Bind texture once per batch (sheet)
-        m_sheet->texture().bind(0);
-
-        glBindVertexArray(m_vao);
-
-        // Upload instance data (one upload per batch)
-        glBindBuffer(GL_ARRAY_BUFFER, m_instance_vbo);
-        glBufferSubData(GL_ARRAY_BUFFER, 0, m_instances.size() * sizeof(SpriteInstance), m_instances.data());
-
-        // One draw call for all instances
-        glDrawArraysInstanced(GL_TRIANGLES, 0, 6, (GLsizei)m_instances.size());
-
-        glBindVertexArray(0);
-        glBindBuffer(GL_ARRAY_BUFFER, 0);
-        glUseProgram(0);
-    }
 }

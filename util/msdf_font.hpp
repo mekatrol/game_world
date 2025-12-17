@@ -94,6 +94,7 @@ namespace util
 
         void render_text(
             renderer::SpriteRenderer &renderer,
+            util::SpriteSheet *sheet,
             const std::string &text,
             float x,
             float y,
@@ -121,7 +122,7 @@ namespace util
                 const float gx = cursor_x + g->bearingX * scale;
                 const float gy = baseline_y - g->bearingY * scale;
 
-                renderer.submit(renderer::SpriteInstance{
+                renderer.submit(sheet, renderer::SpriteInstance{
                     .pos = {gx, gy},
                     .size = {g->w * scale, g->h * scale},
                     .uv = g->uv});

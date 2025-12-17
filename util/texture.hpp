@@ -31,8 +31,6 @@ namespace util
         GLuint id() const noexcept { return m_texture_id; }
         int width() const noexcept { return m_width; }
         int height() const noexcept { return m_height; }
-
-    private:
         void release();
 
     private:

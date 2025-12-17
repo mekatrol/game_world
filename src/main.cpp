@@ -46,130 +46,107 @@ int main(int argc, char **argv)
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
+    renderer::SpriteRenderer sprite_renderer;
+
+    // Sheets
+    util::SpriteSheet transport_belt_sheet("assets/entity/transport-belt/transport-belt.png", 128, 128, false);
+    util::SpriteSheet worm_attack_sheet("assets/entity/worm/worm-attack-2.png", 1920 / 4, 1760 / 4, false);
+
+    util::MsdfFont font;
+    font.load("assets/fonts/font.json", "assets/fonts/font.png");
+    font.sheet().texture().set_filtering(GL_LINEAR, GL_LINEAR);
+
+    const int sprite_count = 100000;
+
+    std::vector<renderer::SpriteInstance> instances(sprite_count);
+
+    for (int i = 0; i < sprite_count; ++i)
     {
-        renderer::SpriteRenderer sprite_renderer_1;
-        renderer::SpriteRenderer sprite_renderer_2;
+        instances[i].frame_offset = 0;
+        instances[i].frame_index = 0;
+        instances[i].frame_count = 16;
+        instances[i].seconds_per_frame = 0.05;
+    }
 
-        // Sheets
-        util::SpriteSheet transport_belt_sheet("assets/entity/transport-belt/transport-belt.png", 128, 128, false);
-        util::SpriteSheet worm_attack_sheet("assets/entity/worm/worm-attack-2.png", 1920 / 4, 1760 / 4, false);
+    double prev_advance_time = glfwGetTime();
+    double anim_time = 0.0;
 
-        util::MsdfFont font;
-        font.load("assets/fonts/font.json", "assets/fonts/font.png");
-        font.sheet().texture().set_filtering(GL_LINEAR, GL_LINEAR);
+    while (!glfwWindowShouldClose(window))
+    {
+        double now = glfwGetTime();
+        fps_counter.tick(now);
 
-        GLuint fontTexId = font.sheet().texture().id();
+        const double elapsed = now - prev_advance_time;
+        prev_advance_time = now;
 
-        glBindTexture(GL_TEXTURE_2D, fontTexId);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glBindTexture(GL_TEXTURE_2D, 0);
+        glfwPollEvents();
 
-        // Simulate many entities: 10k sprites in a grid.
-        // Scale this up to 100k+ to test throughput (and add culling in real usage).
-        const int sprite_count = 100000;
+        if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+        {
+            glfwSetWindowShouldClose(window, GLFW_TRUE);
+        }
 
-        std::vector<renderer::SpriteInstance> instances;
-        instances.resize(sprite_count);
+        glClearColor(0.08f, 0.08f, 0.10f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT);
+
+        int w = 0, h = 0;
+        glfwGetFramebufferSize(window, &w, &h);
+
+        const glm::mat4 proj = glm::ortho(0.0f, (float)w, (float)h, 0.0f);
+
+        sprite_renderer.begin_batch(proj, renderer::SpriteRenderer::BatchType::Sprite);
+
+        const int cols = 500;
+        anim_time += elapsed;
 
         for (int i = 0; i < sprite_count; ++i)
         {
-            unsigned int frame_count = i % 2 == 0 ? 16 : 16;
-            unsigned int frame_offset = i % 2 == 0 ? (i * frame_count) % (frame_count * frame_count) : 0;
+            const float x = (float)(i % cols) * 32.0f;
+            const float y = (float)(i / cols) * 32.0f;
 
-            instances[i].frame_index = 0;
-            instances[i].frame_offset = frame_offset;
-            instances[i].frame_count = frame_count;
-            instances[i].seconds_per_frame = 0.05;
+            auto &inst = instances[i];
+            const int frame = static_cast<int>(anim_time / inst.seconds_per_frame) % inst.frame_count;
+            inst.frame_index = inst.frame_offset + frame;
+
+            renderer::SpriteInstance draw_instance{
+                .pos = {x, y},
+                .size = {64.0f, 64.0f},
+            };
+
+            if ((i & 1) == 0)
+            {
+                draw_instance.uv = transport_belt_sheet.uv_rect_vec4(inst.frame_index);
+                sprite_renderer.submit(&transport_belt_sheet, draw_instance);
+            }
+            else
+            {
+                draw_instance.uv = worm_attack_sheet.uv_rect_vec4(inst.frame_index);
+                sprite_renderer.submit(&worm_attack_sheet, draw_instance);
+            }
         }
 
-        // The previous sprite advance time
-        double prev_advance_time = glfwGetTime();
-        static double anim_time = 0.0;
+        sprite_renderer.end_batch();
 
-        while (!glfwWindowShouldClose(window))
-        {
-            double now = glfwGetTime();
-            fps_counter.tick(now);
+        // Font pass
+        sprite_renderer.begin_batch(proj, renderer::SpriteRenderer::BatchType::Font);
 
-            // The amount of time that has apssed since last frame
-            const double elapsed = now - prev_advance_time;
+        font.render_text(
+            sprite_renderer,
+            &font.sheet(),
+            "FPS: " + std::to_string(fps_counter.fps),
+            10.0f,
+            10.0f,
+            1.0f);
 
-            glfwPollEvents();
+        sprite_renderer.end_batch();
 
-            if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
-            {
-                glfwSetWindowShouldClose(window, GLFW_TRUE);
-            }
-
-            glClearColor(0.08f, 0.08f, 0.10f, 1.0f);
-            glClear(GL_COLOR_BUFFER_BIT);
-
-            int w = 0, h = 0;
-            glfwGetFramebufferSize(window, &w, &h);
-
-            // Pixel-perfect 2D projection (top-left origin).
-            const glm::mat4 proj = glm::ortho(0.0f, (float)w, (float)h, 0.0f);
-
-            // Start sprite rendering
-            sprite_renderer_1.begin_batch(&transport_belt_sheet, proj, renderer::SpriteRenderer::BatchType::Sprite);
-            sprite_renderer_2.begin_batch(&worm_attack_sheet, proj, renderer::SpriteRenderer::BatchType::Sprite);
-
-            // Submit per-instance data.
-            // In a real engine, you’d iterate visible entities, choose their frame index,
-            // compute UV, then submit.
-            const int cols = 500;
-
-            anim_time += elapsed;
-
-            for (int i = 0; i < sprite_count; ++i)
-            {
-                const float x = (float)(i % cols) * 32.0f;
-                const float y = (float)(i / cols) * 32.0f;
-
-                auto &instance = instances[i];
-
-                const int frame = static_cast<int>(anim_time / instance.seconds_per_frame) % instance.frame_count;
-                instance.frame_index = instance.frame_offset + frame;
-
-                if (i % 2 == 0)
-                {
-                    sprite_renderer_1.submit(renderer::SpriteInstance{
-                        .pos = {x, y},
-                        .size = {64.0f, 64.0f},
-                        .uv = transport_belt_sheet.uv_rect_vec4(instance.frame_index),
-                    });
-                }
-                else
-                {
-
-                    sprite_renderer_2.submit(renderer::SpriteInstance{
-                        .pos = {x, y},
-                        .size = {64.0f, 64.0f},
-                        .uv = worm_attack_sheet.uv_rect_vec4(instance.frame_index),
-                    });
-                }
-            }
-
-            prev_advance_time = now;
-
-            sprite_renderer_1.end_batch();
-            sprite_renderer_2.end_batch();
-
-            sprite_renderer_1.begin_batch(&font.sheet(), proj, renderer::SpriteRenderer::BatchType::Font);
-
-            font.render_text(
-                sprite_renderer_1,
-                "FPS: " + std::to_string(fps_counter.fps),
-                10.0f,
-                10.0f,
-                1.0f);
-
-            sprite_renderer_1.end_batch();
-
-            glfwSwapBuffers(window);
-        }
+        glfwSwapBuffers(window);
     }
+
+    sprite_renderer.release();
+    transport_belt_sheet.texture().release();
+    worm_attack_sheet.texture().release();
+    font.sheet().texture().release();
 
     glfwDestroyWindow(window);
     glfwTerminate();
