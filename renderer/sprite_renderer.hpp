@@ -68,7 +68,6 @@ namespace renderer
         std::vector<SpriteInstance> m_instances;
 
         // Max instances per batch buffer allocation.
-        // You can increase this (memory tradeoff).
-        static constexpr size_t MaxInstances = 200'000;
+        static constexpr size_t MaxInstances = 200000;
     };
 }

@@ -11,10 +11,10 @@ namespace renderer
         create_buffers();
 
         m_sprite_shader.use();
-        m_sprite_shader.set_int("uTexture", 0);
+        m_sprite_shader.set_int("u_texture", 0);
 
         m_font_shader.use();
-        m_font_shader.set_int("uTexture", 0);
+        m_font_shader.set_int("u_texture", 0);
 
         glUseProgram(0);
     }
@@ -54,17 +54,17 @@ namespace renderer
         glBufferData(GL_ARRAY_BUFFER, MaxInstances * sizeof(SpriteInstance), nullptr, GL_STREAM_DRAW);
 
         // Instance attributes:
-        // layout(location=1) vec2 iPos
+        // layout(location=1) vec2 i_pos
         glEnableVertexAttribArray(1);
         glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(SpriteInstance), (void *)offsetof(SpriteInstance, pos));
         glVertexAttribDivisor(1, 1);
 
-        // layout(location=2) vec2 iSize
+        // layout(location=2) vec2 i_size
         glEnableVertexAttribArray(2);
         glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(SpriteInstance), (void *)offsetof(SpriteInstance, size));
         glVertexAttribDivisor(2, 1);
 
-        // layout(location=3) vec4 iUV
+        // layout(location=3) vec4 i_uv
         glEnableVertexAttribArray(3);
         glVertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, sizeof(SpriteInstance), (void *)offsetof(SpriteInstance, uv));
         glVertexAttribDivisor(3, 1);
@@ -105,6 +105,7 @@ namespace renderer
 
     void SpriteRenderer::submit(const SpriteInstance &instance)
     {
+        // Add instance to end
         m_instances.push_back(instance);
     }
 
@@ -123,18 +124,19 @@ namespace renderer
             throw std::runtime_error("SpriteRenderer: batch exceeded MaxInstances");
         }
 
+        // Determine shader based on batch type (text or sprites)
         Shader &shader =
             (m_batch_type == BatchType::Font)
                 ? m_font_shader
                 : m_sprite_shader;
 
         shader.use();
-        shader.set_mat4("uProj", m_proj);
+        shader.set_mat4("u_proj", m_proj);
 
+        // Fonts require extra params
         if (m_batch_type == BatchType::Font)
         {
-            shader.set_vec4("uFontColor", {1, 1, 1, 1});
-            shader.set_float("uPxRange", 6.0f);
+            shader.set_vec4("u_color", {1.0f, 1.0f, 1.0f, 1.0f});
         }
 
         // Bind texture once per batch (sheet)
