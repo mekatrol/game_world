@@ -1,44 +1,11 @@
-// OpenGL 3.3 instanced sprite renderer example.
-// Renders many sprites from a sprite sheet with ONE draw call per sheet.
-//
-// Expected assets:
-//   assets/sprites.png   (a sprite sheet image)
-// Expected shaders (copied at project root):
-//   sprite.vert
-//   sprite.frag
-//
-// This example intentionally keeps animation logic on the CPU:
-// - choose current frame index per entity
-// - compute uv rect
-// - submit as per-instance data
-
 #include <glad/gl.h>
 #include <GLFW/glfw3.h>
 #include <glm/gtc/matrix_transform.hpp>
 
 #include "renderer/sprite_renderer.hpp"
+#include "util/fps_counter.hpp"
 #include "util/sprite_sheet.hpp"
 #include "util/msdf_font.hpp"
-
-extern int generate_atlas(int argc, char **argv);
-
-struct FpsCounter
-{
-    double last_time = 0.0;
-    int frames = 0;
-    int fps = 0;
-
-    void tick(double now)
-    {
-        frames++;
-        if (now - last_time >= 1.0)
-        {
-            fps = frames;
-            frames = 0;
-            last_time = now;
-        }
-    }
-};
 
 static void framebuffer_size_callback(GLFWwindow *, int w, int h)
 {
@@ -191,7 +158,7 @@ int main(int argc, char **argv)
                 1.0f,
                 1.0f,
                 1.0f);
-                
+
             sprite_renderer.end_batch();
 
             glfwSwapBuffers(window);
