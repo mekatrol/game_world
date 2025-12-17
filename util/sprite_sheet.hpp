@@ -16,16 +16,24 @@ namespace util
     public:
         SpriteSheet() = default;
 
-        SpriteSheet(const std::string &path, int sprite_width, int sprite_height, bool flip)
+        SpriteSheet(const std::string &path, int sprite_count_x, int sprite_count_y, bool flip)
         {
-            load_from_file(path, sprite_width, sprite_height, flip);
+            load_from_file(path, sprite_count_x, sprite_count_y, flip);
         }
 
-        bool load_from_file(const std::string &path, int sprite_width, int sprite_height, bool flip)
+        bool load_from_file(const std::string &path, int sprite_count_x, int sprite_count_y, bool flip)
         {
-            m_sprite_width = sprite_width;
-            m_sprite_height = sprite_height;
-            return m_texture.load_from_file(path, flip) && validate();
+            bool success = m_texture.load_from_file(path, flip);
+
+            if (!success)
+            {
+                return false;
+            }
+
+            m_sprite_width = m_texture.width() / sprite_count_x;
+            m_sprite_height = m_texture.height() / sprite_count_y;
+
+            return validate();
         }
 
         const Texture &texture() const noexcept { return m_texture; }

@@ -49,8 +49,8 @@ int main(int argc, char **argv)
     renderer::SpriteRenderer sprite_renderer;
 
     // Sheets
-    util::SpriteSheet transport_belt_sheet("assets/entity/transport-belt/transport-belt.png", 128, 128, false);
-    util::SpriteSheet worm_attack_sheet("assets/entity/worm/worm-attack-2.png", 1920 / 4, 1760 / 4, false);
+    util::SpriteSheet transport_belt_sheet("assets/entity/transport-belt/transport-belt.png", 16, 20, false);
+    util::SpriteSheet worm_attack_sheet("assets/entity/worm/worm-attack-2.png", 4, 4, false);
 
     util::MsdfFont font;
     font.load("assets/fonts/font.json", "assets/fonts/font.png");
