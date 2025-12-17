@@ -59,13 +59,14 @@ namespace util
                 out.bearingY = g.value("bearingY", 0.0f);
                 out.w = (float)g.value("w", 0);
                 out.h = (float)g.value("h", 0);
-                
-                out.uv = {
-                    g.value("u0", 0.0f),
-                    g.value("v0", 0.0f),
-                    g.value("u1", 1.0f),
-                    g.value("v1", 1.0f),
-                };
+
+                const float u0 = g.value("u0", 0.0f);
+                const float v0 = g.value("v0", 0.0f);
+                const float u1 = g.value("u1", 1.0f);
+                const float v1 = g.value("v1", 1.0f);
+
+                // NOTE: v0/v1 are inverted.
+                out.uv = {u0, v1, u1, v0};
 
                 m_line_height = std::max(m_line_height, out.bearingY);
                 m_glyphs.emplace(codepoint, out);
