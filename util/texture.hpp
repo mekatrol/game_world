@@ -11,7 +11,7 @@ namespace util
     {
     public:
         Texture() = default;
-        explicit Texture(const std::string &path);
+        explicit Texture(const std::string &path, bool flip);
 
         ~Texture();
 
@@ -21,7 +21,7 @@ namespace util
         Texture(Texture &&other) noexcept;
         Texture &operator=(Texture &&other) noexcept;
 
-        bool load_from_file(const std::string &path);
+        bool load_from_file(const std::string &path, bool flip);
 
         void set_filtering(GLenum min_filter, GLenum mag_filter);
 

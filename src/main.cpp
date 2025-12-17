@@ -122,7 +122,7 @@ int main(int argc, char **argv)
         renderer::SpriteRenderer sprite_renderer;
 
         // Example sprite sheet: adjust path + tile size to match your image.
-        util::SpriteSheet sheet("assets/entity/transport-belt/transport-belt.png", 128, 128);
+        util::SpriteSheet sheet("assets/entity/transport-belt/transport-belt.png", 128, 128, false);
 
         util::MsdfFont font;
         font.load("assets/fonts/font.json", "assets/fonts/font.png");
@@ -191,6 +191,7 @@ int main(int argc, char **argv)
                 1.0f,
                 1.0f,
                 1.0f);
+                
             sprite_renderer.end_batch();
 
             glfwSwapBuffers(window);

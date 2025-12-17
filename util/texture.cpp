@@ -8,9 +8,9 @@
 
 namespace util
 {
-    Texture::Texture(const std::string &path)
+    Texture::Texture(const std::string &path, bool flip)
     {
-        if (!load_from_file(path))
+        if (!load_from_file(path, flip))
         {
             throw std::runtime_error("Texture: failed to load: " + path);
         }
@@ -46,13 +46,16 @@ namespace util
         return *this;
     }
 
-    bool Texture::load_from_file(const std::string &path)
+    bool Texture::load_from_file(const std::string &path, bool flip)
     {
         release();
 
         // Many sprite pipelines use top-left origin; OpenGL textures are bottom-left.
         // If your UVs assume top-left, flip the loaded image.
-        stbi_set_flip_vertically_on_load(1);
+        if (flip)
+        {
+            stbi_set_flip_vertically_on_load(1);
+        }
 
         int width = 0;
         int height = 0;

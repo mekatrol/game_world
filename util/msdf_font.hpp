@@ -41,7 +41,7 @@ namespace util
 
             // Load the atlas as a 1x1 "sheet" so SpriteRenderer can use its texture.
             // This passes SpriteSheet's validation requirements. :contentReference[oaicite:1]{index=1}
-            if (!m_sheet.load_from_file(png_path, m_atlas_size, m_atlas_size))
+            if (!m_sheet.load_from_file(png_path, m_atlas_size, m_atlas_size, false))
                 return false;
 
             m_glyphs.clear();
@@ -59,6 +59,7 @@ namespace util
                 out.bearingY = g.value("bearingY", 0.0f);
                 out.w = (float)g.value("w", 0);
                 out.h = (float)g.value("h", 0);
+                
                 out.uv = {
                     g.value("u0", 0.0f),
                     g.value("v0", 0.0f),
