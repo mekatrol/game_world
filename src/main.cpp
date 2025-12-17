@@ -1,38 +1,43 @@
+// main.cpp
+//
+// Notes on performance:
+// - All JSON and sprite sheet creation happens once at startup.
+// - The hot loop does NOT do any unordered_map lookups or string hashing.
+// - The hot loop avoids per-sprite division/modulo for animation timing.
+// - Sprite positions are precomputed once (no i%cols / i/cols each frame).
+// - Optional: sprites are submitted grouped-by-sheet to minimize texture/state changes.
+
 #include <glad/gl.h>
 #include <GLFW/glfw3.h>
 #include <glm/gtc/matrix_transform.hpp>
 
-#include <unordered_map>
+#include <cstdint>
 #include <memory>
+#include <string>
+#include <unordered_map>
+#include <vector>
 
 #include "renderer/sprite_renderer.hpp"
-#include "util/fps_counter.hpp"
-#include "util/sprite_sheet.hpp"
-#include "util/msdf_font.hpp"
 #include "util/animation_library.hpp"
+#include "util/fps_counter.hpp"
+#include "util/msdf_font.hpp"
+#include "util/sprite_sheet.hpp"
 
 static void framebuffer_size_callback(GLFWwindow *, int w, int h)
 {
     glViewport(0, 0, w, h);
 }
 
-static std::vector<unsigned int> offset_frames(const std::vector<unsigned int> &frames, unsigned int offset)
-{
-    std::vector<unsigned int> new_frames;
-    new_frames.reserve(frames.size());
-
-    for (auto frame : frames)
-    {
-        new_frames.push_back(frame + offset);
-    }
-
-    return new_frames;
-}
-
 int main(int argc, char **argv)
 {
+    (void)argc;
+    (void)argv;
+
     FpsCounter fps_counter;
 
+    // -----------------------------
+    // Window / GL init
+    // -----------------------------
     if (!glfwInit())
     {
         return 1;
@@ -51,6 +56,8 @@ int main(int argc, char **argv)
 
     glfwMakeContextCurrent(window);
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+
+    // V-sync
     glfwSwapInterval(1);
 
     if (!gladLoadGL((GLADloadfunc)glfwGetProcAddress))
@@ -63,12 +70,36 @@ int main(int argc, char **argv)
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
+    // -----------------------------
+    // Scene configuration
+    // -----------------------------
     const int sprite_count = 100000;
+    const int cols = 500;
 
-    // Load animation definitions from json
+    // -----------------------------
+    // Load animation definitions (JSON) once
+    // -----------------------------
+    // Expected schema (per animation json):
+    // {
+    //   "key": "...",
+    //   "assetFile": "...",
+    //   "spriteCountX": N,
+    //   "spriteCountY": M,
+    //   "frameSequences": {
+    //     "sequenceName": { "frames":[...], "secondsPerFrame": 0.05 },
+    //     ...
+    //   }
+    // }
     const auto animations = util::load_animation_library("assets/animations");
 
+    // -----------------------------
+    // Create one SpriteSheet per animation key
+    // -----------------------------
+    // Stored in a map only for lifetime management and release().
+    // We will NOT use this map in the hot loop.
     std::unordered_map<std::string, std::unique_ptr<util::SpriteSheet>> sheets_by_key;
+    sheets_by_key.reserve(animations.size());
+
     for (const auto &[key, def] : animations)
     {
         sheets_by_key.emplace(
@@ -80,49 +111,124 @@ int main(int argc, char **argv)
                 false));
     }
 
-    // Build a flat list of (sheet, sequence) pairs to cycle through
+    // -----------------------------
+    // Flatten animations into a list of runtime options
+    // -----------------------------
+    // This resolves the sheet pointer ONCE and keeps a pointer to the sequence ONCE.
+    // No string hashing, no map access in the hot loop.
     struct RuntimeAnim
     {
-        const util::AnimationDef *def;
-        const util::FrameSequence *sequence;
+        util::SpriteSheet *sheet = nullptr;
+        const util::FrameSequence *sequence = nullptr;
     };
 
     std::vector<RuntimeAnim> runtime_anims;
-    for (const auto &[_, def] : animations)
+    runtime_anims.reserve(64);
+
+    for (const auto &[key, def] : animations)
     {
-        for (const auto &[_, seq] : def.sequences)
+        // Lookup ONCE here (startup time).
+        auto *sheet = sheets_by_key.at(key).get();
+
+        for (const auto &[seq_name, seq] : def.sequences)
         {
-            runtime_anims.push_back({&def, &seq});
+            (void)seq_name; // sequence names are arbitrary; not needed at runtime here
+            runtime_anims.push_back(RuntimeAnim{sheet, &seq});
         }
     }
 
+    // Must have at least 1 animation sequence loaded.
+    if (runtime_anims.empty())
+    {
+        // Nothing to display; clean shutdown.
+        glfwDestroyWindow(window);
+        glfwTerminate();
+        return 1;
+    }
+
+    // -----------------------------
+    // Allocate sprite instances + cached per-sprite data
+    // -----------------------------
     std::vector<renderer::SpriteInstance> instances(sprite_count);
+
+    // Cache the sheet pointer per sprite, so the draw loop never touches a map.
+    std::vector<util::SpriteSheet *> instance_sheets(sprite_count, nullptr);
+
+    // Cache frame sequence pointers/lengths for ultra-cheap access.
+    std::vector<const unsigned int *> frames_ptr(sprite_count, nullptr);
+    std::vector<uint32_t> frames_len(sprite_count, 0);
+
+    // Cache per-sprite timing (float is plenty here).
+    std::vector<float> seconds_per_frame(sprite_count, 0.1f);
+
+    // Per-sprite animation state (no division/modulo needed per frame).
+    std::vector<float> anim_accum(sprite_count, 0.0f);
+    std::vector<uint32_t> frame_cursor(sprite_count, 0);
+
+    // Precompute positions once (avoid i%cols and i/cols in the hot loop).
+    std::vector<glm::vec2> positions(sprite_count);
+    positions.reserve(sprite_count);
 
     for (int i = 0; i < sprite_count; ++i)
     {
         const auto &ra = runtime_anims[static_cast<size_t>(i) % runtime_anims.size()];
 
-        instances[i].frame_index = 0;
+        // Assign the sprite's chosen sheet + sequence once.
+        instance_sheets[i] = ra.sheet;
+
+        frames_ptr[i] = ra.sequence->frames.data();
+        frames_len[i] = static_cast<uint32_t>(ra.sequence->frames.size());
+        seconds_per_frame[i] = static_cast<float>(ra.sequence->seconds_per_frame);
+
+        // Initialize frame index to first frame (safe even if size==0, but size should be >0).
+        frame_cursor[i] = 0;
+        anim_accum[i] = 0.0f;
+
+        instances[i].frame_index = (frames_len[i] > 0) ? frames_ptr[i][0] : 0;
         instances[i].frame_sequence = std::span<const unsigned int>(ra.sequence->frames);
         instances[i].seconds_per_frame = ra.sequence->seconds_per_frame;
+
+        // Precompute sprite position.
+        const float x = static_cast<float>(i % cols) * 32.0f;
+        const float y = static_cast<float>(i / cols) * 32.0f;
+        positions[i] = {x, y};
     }
 
+    // -----------------------------
+    // Optional: group indices by sheet to minimize texture/state changes
+    // -----------------------------
+    // If your SpriteRenderer breaks batches on texture changes, submitting mixed sheets
+    // will hurt. Grouping ensures we submit contiguous runs by sheet.
+    std::unordered_map<util::SpriteSheet *, std::vector<int>> sheet_to_indices;
+    sheet_to_indices.reserve(sheets_by_key.size());
+
+    for (int i = 0; i < sprite_count; ++i)
+    {
+        sheet_to_indices[instance_sheets[i]].push_back(i);
+    }
+
+    // -----------------------------
+    // Renderer + font
+    // -----------------------------
     renderer::SpriteRenderer sprite_renderer;
 
     util::MsdfFont font;
     font.load("assets/fonts/font.json", "assets/fonts/font.png");
     font.sheet().texture().set_filtering(GL_LINEAR, GL_LINEAR);
 
-    double prev_advance_time = glfwGetTime();
-    double anim_time = 0.0;
+    // Timing
+    double prev_time = glfwGetTime();
 
+    // -----------------------------
+    // Main loop
+    // -----------------------------
     while (!glfwWindowShouldClose(window))
     {
-        double now = glfwGetTime();
+        const double now = glfwGetTime();
         fps_counter.tick(now);
 
-        const double elapsed = now - prev_advance_time;
-        prev_advance_time = now;
+        const double elapsed = now - prev_time;
+        prev_time = now;
 
         glfwPollEvents();
 
@@ -137,37 +243,63 @@ int main(int argc, char **argv)
         int w = 0, h = 0;
         glfwGetFramebufferSize(window, &w, &h);
 
-        const glm::mat4 proj = glm::ortho(0.0f, (float)w, (float)h, 0.0f);
+        const glm::mat4 proj = glm::ortho(0.0f, static_cast<float>(w), static_cast<float>(h), 0.0f);
 
+        // -----------------------------
+        // Sprite pass
+        // -----------------------------
         sprite_renderer.begin_batch(proj, renderer::SpriteRenderer::BatchType::Sprite);
 
-        const int cols = 500;
-        anim_time += elapsed;
+        const float dt = static_cast<float>(elapsed);
 
-        for (int i = 0; i < sprite_count; ++i)
+        // Render grouped-by-sheet for fewer texture switches (often improves FPS).
+        for (auto &[sheet, idxs] : sheet_to_indices)
         {
-            const float x = (float)(i % cols) * 32.0f;
-            const float y = (float)(i / cols) * 32.0f;
+            // Submit all sprites that use this sheet.
+            for (int idx : idxs)
+            {
+                // Advance animation using accumulator stepping:
+                // - No division
+                // - No modulo (wrap is a single compare)
+                anim_accum[idx] += dt;
 
-            auto &instance = instances[i];
-            const unsigned int frame_sequence_index = static_cast<int>(anim_time / instance.seconds_per_frame) % instance.frame_sequence.size();
-            instance.frame_index = instance.frame_sequence[frame_sequence_index];
+                const float spf = seconds_per_frame[idx];
 
-            renderer::SpriteInstance draw_instance{
-                .pos = {x, y},
-                .size = {64.0f, 64.0f},
-            };
+                // Fast path: step at most one frame per tick (good for stable frame times).
+                if (anim_accum[idx] >= spf)
+                {
+                    anim_accum[idx] -= spf;
 
-            const auto &ra = runtime_anims[static_cast<size_t>(i) % runtime_anims.size()];
-            auto *sheet = sheets_by_key.at(ra.def->key).get();
+                    uint32_t c = frame_cursor[idx] + 1;
+                    if (c >= frames_len[idx])
+                    {
+                        c = 0;
+                    }
+                    frame_cursor[idx] = c;
+                }
 
-            draw_instance.uv = sheet->uv_rect_vec4(instance.frame_index);
-            sprite_renderer.submit(sheet, draw_instance);
+                const unsigned int frame = frames_ptr[idx][frame_cursor[idx]];
+                instances[idx].frame_index = frame;
+
+                // Build draw instance (pos from precomputed array).
+                const glm::vec2 p = positions[idx];
+
+                renderer::SpriteInstance draw_instance{
+                    .pos = {p.x, p.y},
+                    .size = {64.0f, 64.0f},
+                };
+
+                // Compute UV rect for current frame and submit.
+                draw_instance.uv = sheet->uv_rect_vec4(frame);
+                sprite_renderer.submit(sheet, draw_instance);
+            }
         }
 
         sprite_renderer.end_batch();
 
+        // -----------------------------
         // Font pass
+        // -----------------------------
         sprite_renderer.begin_batch(proj, renderer::SpriteRenderer::BatchType::Font);
 
         font.render_text(
@@ -183,13 +315,19 @@ int main(int argc, char **argv)
         glfwSwapBuffers(window);
     }
 
+    // -----------------------------
+    // Cleanup / release
+    // -----------------------------
     sprite_renderer.release();
 
+    // Release all textures created for sheets loaded from JSON.
     for (auto &[key, sheet] : sheets_by_key)
     {
+        (void)key;
         sheet->texture().release();
     }
-    
+
+    // Release font texture.
     font.sheet().texture().release();
 
     glfwDestroyWindow(window);
