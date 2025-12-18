@@ -293,7 +293,7 @@ int main(int argc, char **argv)
 
                 renderer::SpriteInstance draw_instance{
                     .pos = {p.x, p.y},
-                    .size = {64.0f, 64.0f},
+                    .size = {tile_size, tile_size},
                 };
 
                 // Compute UV rect for current frame and submit.
