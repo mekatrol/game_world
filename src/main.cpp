@@ -221,7 +221,7 @@ int main(int argc, char **argv)
 
     util::MsdfFont font;
     font.load("assets/fonts/font.json", "assets/fonts/font.png");
-    font.sheet().base_sheet().texture.set_filtering(GL_LINEAR, GL_LINEAR);
+    font.sheet().base_sprite().texture.set_filtering(GL_LINEAR, GL_LINEAR);
 
     // Timing
     double prev_time = glfwGetTime();
@@ -331,13 +331,13 @@ int main(int argc, char **argv)
     for (auto &[key, sheet] : sheets_by_key)
     {
         (void)key;
-        sheet->base_sheet().texture.release();
-        sheet->mask_sheet().texture.release();
-        sheet->shadow_sheet().texture.release();
+        sheet->base_sprite().texture.release();
+        sheet->mask_sprite().texture.release();
+        sheet->shadow_sprite().texture.release();
     }
 
     // Release font texture.
-    font.sheet().base_sheet().texture.release();
+    font.sheet().base_sprite().texture.release();
 
     glfwDestroyWindow(window);
     glfwTerminate();

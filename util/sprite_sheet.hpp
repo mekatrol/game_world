@@ -33,13 +33,13 @@ namespace util
                                  const std::string &shadow_path,
                                  bool flip);
 
-        const Sprite &base_sheet() const noexcept;
-        const Sprite &mask_sheet() const noexcept;
-        const Sprite &shadow_sheet() const noexcept;
+        const Sprite &base_sprite() const noexcept;
+        const Sprite &mask_sprite() const noexcept;
+        const Sprite &shadow_sprite() const noexcept;
 
-        Sprite &base_sheet() noexcept;
-        Sprite &mask_sheet() noexcept;
-        Sprite &shadow_sheet() noexcept;
+        Sprite &base_sprite() noexcept;
+        Sprite &mask_sprite() noexcept;
+        Sprite &shadow_sprite() noexcept;
 
         int columns() const noexcept;
         int rows() const noexcept;
@@ -53,8 +53,8 @@ namespace util
         bool validate() const;
 
     private:
-        Sprite m_base_sheet;
-        Sprite m_shadow_sheet;
-        Sprite m_mask_sheet;
+        Sprite m_base_sprite;
+        Sprite m_shadow_sprite;
+        Sprite m_mask_sprite;
     };
 }

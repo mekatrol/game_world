@@ -83,7 +83,7 @@ namespace renderer
             glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
             shader.set_vec4("u_color", {1.0f, 1.0f, 1.0f, 1.0f});
-            sheet->base_sheet().texture.bind(0);
+            sheet->base_sprite().texture.bind(0);
 
             std::size_t offset = 0;
             while (offset < instances.size())
@@ -110,7 +110,7 @@ namespace renderer
                 glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
                 shader.set_vec4("u_color", {0.0f, 0.0f, 0.0f, 0.6f});
-                sheet->shadow_sheet().texture.bind(0);
+                sheet->shadow_sprite().texture.bind(0);
 
                 std::size_t offset = 0;
                 while (offset < instances.size())
@@ -138,7 +138,7 @@ namespace renderer
                 glBlendFunc(GL_DST_COLOR, GL_ZERO); // multiply
 
                 shader.set_vec4("u_color", {1.0f, 1.0f, 1.0f, 1.0f});
-                sheet->mask_sheet().texture.bind(0);
+                sheet->mask_sprite().texture.bind(0);
 
                 offset = 0;
                 while (offset < instances.size())
