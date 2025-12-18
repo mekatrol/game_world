@@ -16,6 +16,7 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include <random>
 
 #include "renderer/sprite_renderer.hpp"
 #include "util/animation_library.hpp"
@@ -176,6 +177,8 @@ int main(int argc, char **argv)
 
     const unsigned int tile_size = 32.0f;
 
+    std::mt19937 rng{std::random_device{}()};
+
     for (int i = 0; i < sprite_count; ++i)
     {
         const auto &ra = runtime_anims[static_cast<size_t>(i) % runtime_anims.size()];
@@ -188,8 +191,19 @@ int main(int argc, char **argv)
         seconds_per_frame[i] = static_cast<float>(ra.sequence->seconds_per_frame);
 
         // Initialize frame index to first frame (safe even if size==0, but size should be >0).
-        frame_cursor[i] = 0;
         anim_accum[i] = 0.0f;
+
+        if (frames_len[i] > 0)
+        {
+            std::uniform_int_distribution<uint32_t> dist(0, frames_len[i] - 1);
+            frame_cursor[i] = dist(rng);
+            instances[i].frame_index = frames_ptr[i][frame_cursor[i]];
+        }
+        else
+        {
+            frame_cursor[i] = 0;
+            instances[i].frame_index = 0;
+        }
 
         instances[i].frame_index = (frames_len[i] > 0) ? frames_ptr[i][0] : 0;
         instances[i].frame_sequence = std::span<const unsigned int>(ra.sequence->frames);
@@ -244,8 +258,9 @@ int main(int argc, char **argv)
             glfwSetWindowShouldClose(window, GLFW_TRUE);
         }
 
-        glClearColor(0.08f, 0.08f, 0.10f, 1.0f);
+        glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
+
 
         int w = 0, h = 0;
         glfwGetFramebufferSize(window, &w, &h);
