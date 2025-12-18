@@ -7,20 +7,20 @@ namespace util
         load_from_file(path, sprite_count_x, sprite_count_y, flip);
     }
 
-    bool SpriteSheet::has_mask() const noexcept { return m_mask_texture.is_valid(); }
-    bool SpriteSheet::has_shadow() const noexcept { return m_shadow_texture.is_valid(); }
+    bool SpriteSheet::has_mask() const noexcept { return m_mask_sheet.texture.is_valid(); }
+    bool SpriteSheet::has_shadow() const noexcept { return m_shadow_sheet.texture.is_valid(); }
 
     bool SpriteSheet::load_from_file(const std::string &path, int sprite_count_x, int sprite_count_y, bool flip)
     {
-        bool success = m_texture.load_from_file(path, flip);
+        bool success = m_base_sheet.texture.load_from_file(path, flip);
 
         if (!success)
         {
             return false;
         }
 
-        m_sprite_width = m_texture.width() / sprite_count_x;
-        m_sprite_height = m_texture.height() / sprite_count_y;
+        m_base_sheet.sprite_width = m_base_sheet.texture.width() / sprite_count_x;
+        m_base_sheet.sprite_height = m_base_sheet.texture.height() / sprite_count_y;
 
         return validate();
     }
@@ -30,33 +30,30 @@ namespace util
                                           bool flip)
     {
         // Preserved original logic exactly (even though it looks inverted).
-        if (!mask_path.empty() && m_mask_texture.load_from_file(mask_path, flip))
+        if (!mask_path.empty() && m_mask_sheet.texture.load_from_file(mask_path, flip))
         {
             return false;
         }
 
-        return mask_path.empty() || m_shadow_texture.load_from_file(shadow_path, flip);
+        return mask_path.empty() || m_shadow_sheet.texture.load_from_file(shadow_path, flip);
     }
 
-    const Texture &SpriteSheet::texture() const noexcept { return m_texture; }
-    const Texture &SpriteSheet::mask_texture() const noexcept { return m_mask_texture; }
-    const Texture &SpriteSheet::shadow_texture() const noexcept { return m_shadow_texture; }
+    const Sprite &SpriteSheet::base_sheet() const noexcept { return m_base_sheet; }
+    const Sprite &SpriteSheet::mask_sheet() const noexcept { return m_mask_sheet; }
+    const Sprite &SpriteSheet::shadow_sheet() const noexcept { return m_shadow_sheet; }
 
-    Texture &SpriteSheet::texture() noexcept { return m_texture; }
-    Texture &SpriteSheet::mask_texture() noexcept { return m_mask_texture; }
-    Texture &SpriteSheet::shadow_texture() noexcept { return m_shadow_texture; }
-
-    int SpriteSheet::sprite_width() const noexcept { return m_sprite_width; }
-    int SpriteSheet::sprite_height() const noexcept { return m_sprite_height; }
+    Sprite &SpriteSheet::base_sheet() noexcept { return m_base_sheet; }
+    Sprite &SpriteSheet::mask_sheet() noexcept { return m_mask_sheet; }
+    Sprite &SpriteSheet::shadow_sheet() noexcept { return m_shadow_sheet; }
 
     int SpriteSheet::columns() const noexcept
     {
-        return (m_sprite_width > 0) ? (m_texture.width() / m_sprite_width) : 0;
+        return (m_base_sheet.sprite_width > 0) ? (m_base_sheet.texture.width() / m_base_sheet.sprite_width) : 0;
     }
 
     int SpriteSheet::rows() const noexcept
     {
-        return (m_sprite_height > 0) ? (m_texture.height() / m_sprite_height) : 0;
+        return (m_base_sheet.sprite_height > 0) ? (m_base_sheet.texture.height() / m_base_sheet.sprite_height) : 0;
     }
 
     int SpriteSheet::sprite_count() const noexcept
@@ -68,7 +65,7 @@ namespace util
     {
         const int cols = columns();
 
-        if (cols <= 0 || m_sprite_width <= 0 || m_sprite_height <= 0)
+        if (cols <= 0 || m_base_sheet.sprite_width <= 0 || m_base_sheet.sprite_height <= 0)
         {
             return {0.0f, 0.0f, 1.0f, 1.0f};
         }
@@ -76,13 +73,13 @@ namespace util
         const int x = sprite_index % cols;
         const int y = sprite_index / cols;
 
-        const float tex_w = (float)m_texture.width();
-        const float tex_h = (float)m_texture.height();
+        const float tex_w = (float)m_base_sheet.texture.width();
+        const float tex_h = (float)m_base_sheet.texture.height();
 
-        const float u0 = (x * m_sprite_width) / tex_w;
-        const float v0 = (y * m_sprite_height) / tex_h;
-        const float u1 = ((x + 1) * m_sprite_width) / tex_w;
-        const float v1 = ((y + 1) * m_sprite_height) / tex_h;
+        const float u0 = (x * m_base_sheet.sprite_width) / tex_w;
+        const float v0 = (y * m_base_sheet.sprite_height) / tex_h;
+        const float u1 = ((x + 1) * m_base_sheet.sprite_width) / tex_w;
+        const float v1 = ((y + 1) * m_base_sheet.sprite_height) / tex_h;
 
         return {u0, v0, u1, v1};
     }
@@ -99,19 +96,19 @@ namespace util
 
     bool SpriteSheet::validate() const
     {
-        if (m_texture.id() == 0 || m_texture.width() <= 0 || m_texture.height() <= 0)
+        if (m_base_sheet.texture.id() == 0 || m_base_sheet.texture.width() <= 0 || m_base_sheet.texture.height() <= 0)
         {
             return false;
         }
-        if (m_sprite_width <= 0 || m_sprite_height <= 0)
+        if (m_base_sheet.sprite_width <= 0 || m_base_sheet.sprite_height <= 0)
         {
             return false;
         }
-        if ((m_texture.width() % m_sprite_width) != 0)
+        if ((m_base_sheet.texture.width() % m_base_sheet.sprite_width) != 0)
         {
             return false;
         }
-        if ((m_texture.height() % m_sprite_height) != 0)
+        if ((m_base_sheet.texture.height() % m_base_sheet.sprite_height) != 0)
         {
             return false;
         }

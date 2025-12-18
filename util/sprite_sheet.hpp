@@ -6,6 +6,14 @@
 
 namespace util
 {
+    struct Sprite
+    {
+        Texture texture{};
+
+        int sprite_width{};
+        int sprite_height{};
+    };
+
     // SpriteSheet:
     // - loads a texture
     // - interprets it as a grid of same-sized tiles
@@ -25,16 +33,13 @@ namespace util
                                  const std::string &shadow_path,
                                  bool flip);
 
-        const Texture &texture() const noexcept;
-        const Texture &mask_texture() const noexcept;
-        const Texture &shadow_texture() const noexcept;
+        const Sprite &base_sheet() const noexcept;
+        const Sprite &mask_sheet() const noexcept;
+        const Sprite &shadow_sheet() const noexcept;
 
-        Texture &texture() noexcept;
-        Texture &mask_texture() noexcept;
-        Texture &shadow_texture() noexcept;
-
-        int sprite_width() const noexcept;
-        int sprite_height() const noexcept;
+        Sprite &base_sheet() noexcept;
+        Sprite &mask_sheet() noexcept;
+        Sprite &shadow_sheet() noexcept;
 
         int columns() const noexcept;
         int rows() const noexcept;
@@ -48,11 +53,8 @@ namespace util
         bool validate() const;
 
     private:
-        Texture m_texture{};
-        Texture m_mask_texture{};
-        Texture m_shadow_texture{};
-
-        int m_sprite_width{};
-        int m_sprite_height{};
+        Sprite m_base_sheet;
+        Sprite m_shadow_sheet;
+        Sprite m_mask_sheet;
     };
 }

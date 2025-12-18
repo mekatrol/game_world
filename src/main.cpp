@@ -174,6 +174,8 @@ int main(int argc, char **argv)
     std::vector<glm::vec2> positions(sprite_count);
     positions.reserve(sprite_count);
 
+    const unsigned int tile_size = 32.0f;
+
     for (int i = 0; i < sprite_count; ++i)
     {
         const auto &ra = runtime_anims[static_cast<size_t>(i) % runtime_anims.size()];
@@ -194,8 +196,8 @@ int main(int argc, char **argv)
         instances[i].seconds_per_frame = ra.sequence->seconds_per_frame;
 
         // Precompute sprite position.
-        const float x = static_cast<float>(i % cols) * 32.0f;
-        const float y = static_cast<float>(i / cols) * 32.0f;
+        const float x = static_cast<float>(i % cols) * tile_size;
+        const float y = static_cast<float>(i / cols) * tile_size;
         positions[i] = {x, y};
     }
 
@@ -219,7 +221,7 @@ int main(int argc, char **argv)
 
     util::MsdfFont font;
     font.load("assets/fonts/font.json", "assets/fonts/font.png");
-    font.sheet().texture().set_filtering(GL_LINEAR, GL_LINEAR);
+    font.sheet().base_sheet().texture.set_filtering(GL_LINEAR, GL_LINEAR);
 
     // Timing
     double prev_time = glfwGetTime();
@@ -329,13 +331,13 @@ int main(int argc, char **argv)
     for (auto &[key, sheet] : sheets_by_key)
     {
         (void)key;
-        sheet->texture().release();
-        sheet->mask_texture().release();
-        sheet->shadow_texture().release();
+        sheet->base_sheet().texture.release();
+        sheet->mask_sheet().texture.release();
+        sheet->shadow_sheet().texture.release();
     }
 
     // Release font texture.
-    font.sheet().texture().release();
+    font.sheet().base_sheet().texture.release();
 
     glfwDestroyWindow(window);
     glfwTerminate();
