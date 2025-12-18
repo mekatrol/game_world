@@ -55,7 +55,9 @@ namespace renderer
             return;
         }
 
-        Shader &shader = (m_batch_type == BatchType::Font) ? m_font_shader : m_sprite_shader;
+        Shader &shader = (m_batch_type == BatchType::Font)
+                             ? m_font_shader
+                             : m_sprite_shader;
 
         shader.use();
         shader.set_mat4("u_proj", m_proj);
@@ -68,7 +70,6 @@ namespace renderer
         glBindVertexArray(m_vao);
         glBindBuffer(GL_ARRAY_BUFFER, m_instance_vbo);
 
-        // If you are not compiling with C++17, replace this loop (see below).
         for (auto &[sheet, instances] : m_buckets)
         {
             if (!sheet || instances.empty())
@@ -76,17 +77,87 @@ namespace renderer
                 continue;
             }
 
+            // --------------------
+            // 1) Base sprite (always)
+            // --------------------
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+            shader.set_vec4("u_color", {1.0f, 1.0f, 1.0f, 1.0f});
             sheet->texture().bind(0);
 
             std::size_t offset = 0;
             while (offset < instances.size())
             {
-                const std::size_t count = std::min<std::size_t>(MaxInstances, instances.size() - offset);
+                const std::size_t count =
+                    std::min<std::size_t>(MaxInstances, instances.size() - offset);
 
-                glBufferSubData(GL_ARRAY_BUFFER, 0, count * sizeof(SpriteInstance), instances.data() + offset);
+                glBufferSubData(
+                    GL_ARRAY_BUFFER,
+                    0,
+                    count * sizeof(SpriteInstance),
+                    instances.data() + offset);
+
                 glDrawArraysInstanced(GL_TRIANGLES, 0, 6, (GLsizei)count);
-
                 offset += count;
+            }
+
+            // --------------------
+            // 2) Shadow pass (optional)
+            // --------------------
+            if (m_batch_type == BatchType::Sprite && sheet->has_shadow())
+            {
+                glEnable(GL_BLEND);
+                glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+                shader.set_vec4("u_color", {0.0f, 0.0f, 0.0f, 0.6f});
+                sheet->shadow_texture().bind(0);
+
+                std::size_t offset = 0;
+                while (offset < instances.size())
+                {
+                    const std::size_t count =
+                        std::min<std::size_t>(MaxInstances, instances.size() - offset);
+
+                    glBufferSubData(
+                        GL_ARRAY_BUFFER,
+                        0,
+                        count * sizeof(SpriteInstance),
+                        instances.data() + offset);
+
+                    glDrawArraysInstanced(GL_TRIANGLES, 0, 6, (GLsizei)count);
+                    offset += count;
+                }
+            }
+            
+            // --------------------
+            // 3) Mask pass (optional, multiply)
+            // --------------------
+            if (m_batch_type == BatchType::Sprite && sheet->has_mask())
+            {
+                glEnable(GL_BLEND);
+                glBlendFunc(GL_DST_COLOR, GL_ZERO); // multiply
+
+                shader.set_vec4("u_color", {1.0f, 1.0f, 1.0f, 1.0f});
+                sheet->mask_texture().bind(0);
+
+                offset = 0;
+                while (offset < instances.size())
+                {
+                    const std::size_t count =
+                        std::min<std::size_t>(MaxInstances, instances.size() - offset);
+
+                    glBufferSubData(
+                        GL_ARRAY_BUFFER,
+                        0,
+                        count * sizeof(SpriteInstance),
+                        instances.data() + offset);
+
+                    glDrawArraysInstanced(GL_TRIANGLES, 0, 6, (GLsizei)count);
+                    offset += count;
+                }
+
+                // Restore default blend
+                glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
             }
         }
 

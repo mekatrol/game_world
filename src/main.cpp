@@ -102,13 +102,18 @@ int main(int argc, char **argv)
 
     for (const auto &[key, def] : animations)
     {
-        sheets_by_key.emplace(
+        auto [it, inserted] = sheets_by_key.emplace(
             key,
             std::make_unique<util::SpriteSheet>(
                 def.asset_file,
                 def.sprite_count_x,
                 def.sprite_count_y,
                 false));
+
+        it->second->load_night_overlays(
+            def.asset_mask_file,
+            def.asset_shadow_file,
+            false);
     }
 
     // -----------------------------
@@ -325,6 +330,8 @@ int main(int argc, char **argv)
     {
         (void)key;
         sheet->texture().release();
+        sheet->mask_texture().release();
+        sheet->shadow_texture().release();
     }
 
     // Release font texture.

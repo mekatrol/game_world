@@ -1,6 +1,8 @@
 {
     "key": "defender-robot",
     "assetFile": "assets/entity/defender-robot/defender-robot.png",
+    "assetMaskFile1": "assets/entity/defender-robot/defender-robot-mask.png",
+    "assetShadowFile1": "assets/entity/defender-robot/defender-robot-shadow.png",
     "spriteCountX": 16,
     "spriteCountY": 2,
     "frameSequences": {

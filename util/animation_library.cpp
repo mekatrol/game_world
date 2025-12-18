@@ -30,6 +30,16 @@ namespace util
         def.sprite_count_x = j.at("spriteCountX").get<int>();
         def.sprite_count_y = j.at("spriteCountY").get<int>();
 
+        if (j.contains("assetMaskFile"))
+        {
+            def.asset_mask_file = j.at("assetMaskFile").get<std::string>();
+        }
+
+        if (j.contains("assetShadowFile"))
+        {
+            def.asset_shadow_file = j.at("assetShadowFile").get<std::string>();
+        }
+
         const auto &seqs = j.at("frameSequences");
         if (!seqs.is_object())
         {

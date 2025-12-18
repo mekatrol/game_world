@@ -21,6 +21,9 @@ namespace util
             load_from_file(path, sprite_count_x, sprite_count_y, flip);
         }
 
+        bool has_mask() const noexcept { return m_mask_texture.is_valid(); }
+        bool has_shadow() const noexcept { return m_shadow_texture.is_valid(); }
+
         bool load_from_file(const std::string &path, int sprite_count_x, int sprite_count_y, bool flip)
         {
             bool success = m_texture.load_from_file(path, flip);
@@ -36,8 +39,25 @@ namespace util
             return validate();
         }
 
+        bool load_night_overlays(const std::string &mask_path,
+                                 const std::string &shadow_path,
+                                 bool flip)
+        {
+            if (!mask_path.empty() && m_mask_texture.load_from_file(mask_path, flip))
+            {
+                return false;
+            }
+
+            return mask_path.empty() || m_shadow_texture.load_from_file(shadow_path, flip);
+        }
+
         const Texture &texture() const noexcept { return m_texture; }
+        const Texture &mask_texture() const noexcept { return m_mask_texture; }
+        const Texture &shadow_texture() const noexcept { return m_shadow_texture; }
+
         Texture &texture() noexcept { return m_texture; }
+        Texture &mask_texture() noexcept { return m_mask_texture; }
+        Texture &shadow_texture() noexcept { return m_shadow_texture; }
 
         int sprite_width() const noexcept { return m_sprite_width; }
         int sprite_height() const noexcept { return m_sprite_height; }
@@ -115,6 +135,8 @@ namespace util
 
     private:
         Texture m_texture{};
+        Texture m_mask_texture{};
+        Texture m_shadow_texture{};
         int m_sprite_width{};
         int m_sprite_height{};
     };

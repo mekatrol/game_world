@@ -28,6 +28,11 @@ namespace util
         void bind(GLuint slot = 0) const;
         void unbind() const;
 
+        bool is_valid() const noexcept
+        {
+            return m_texture_id != 0;
+        }
+
         GLuint id() const noexcept { return m_texture_id; }
         int width() const noexcept { return m_width; }
         int height() const noexcept { return m_height; }

@@ -16,6 +16,8 @@ namespace util
     {
         std::string key;
         std::string asset_file;
+        std::string asset_mask_file;
+        std::string asset_shadow_file;
         int sprite_count_x = 0;
         int sprite_count_y = 0;
 
