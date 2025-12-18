@@ -30,6 +30,7 @@ add_executable(game
     util/texture.hpp
     util/texture.cpp
     util/sprite_sheet.hpp
+    util/sprite_sheet.cpp
     util/msdf_font.hpp
     util/animation_library.hpp
     util/animation_library.cpp
